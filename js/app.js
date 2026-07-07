@@ -863,8 +863,11 @@ async function renderFeed() {
   listEl.innerHTML = '<div class="albumEmpty">よみこみ中…🍶</div>';
   try {
     const d = await api(`/feed?uid=${state.uid}`);
+    state.friendsCache = d.friends;
+    saveState();
+    renderFriendChips(d.friends);
     document.getElementById('feedInfo').textContent =
-      `友達 ${d.friends.length}人 ／ 載せられるのは1日2回まで・選んだ範囲の人にだけ見えるよ`;
+      `載せられるのは1日2回まで・選んだ範囲の人にだけ見えるよ`;
     if (!d.items.length) {
       listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>「友達をさそう」でリンクを送ってみよう🍻</div>';
       return;
@@ -884,20 +887,57 @@ async function renderFeed() {
     listEl.innerHTML = '<div class="albumEmpty">よみこめなかった…😢<br>電波を確認して🔄で更新してみて</div>';
   }
 }
-document.getElementById('btnToFeed').onclick = () => { renderVisSeg(); renderFeed(); show('screen-feed'); };
+document.getElementById('btnToFeed').onclick = () => {
+  renderVisSeg();
+  renderFriendChips(state.friendsCache || []);
+  renderFeed();
+  show('screen-feed');
+};
 document.getElementById('btnFeedBack').onclick = () => { renderHome(); show('screen-home'); };
 document.getElementById('btnFeedReload').onclick = renderFeed;
 
 // 招待リンク（コード入力なし・リンクを踏むだけで相互フレンド）
-document.getElementById('btnInvite').onclick = async () => {
-  const link = location.origin + location.pathname + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
+// LINE・インスタを最初に出したいので、OSの共有シートではなく専用シートを開く
+function inviteLink() {
+  return location.origin + location.pathname + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
+}
+function inviteMsg() {
+  return `${state.userName}と乾杯フレンドになろう🍻 リンクはSafari（ブラウザ）で開いてね\n${inviteLink()}`;
+}
+document.getElementById('btnInvite').onclick = () => { document.getElementById('inviteSheet').hidden = false; };
+document.getElementById('btnInviteClose').onclick = () => { document.getElementById('inviteSheet').hidden = true; };
+document.getElementById('btnInviteLine').onclick = () => {
+  window.open('https://line.me/R/share?text=' + encodeURIComponent(inviteMsg()), '_blank');
+};
+document.getElementById('btnInviteInsta').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(inviteMsg());
+    alert('招待メッセージをコピーしたよ！\nインスタのDMにペースト（長押し→ペースト）して送ってね🍻');
+    location.href = 'instagram://direct/inbox';
+  } catch (e) {
+    prompt('この招待メッセージをコピーして、インスタのDMで送ってね', inviteMsg());
+  }
+};
+document.getElementById('btnInviteOther').onclick = async () => {
+  const link = inviteLink();
   const text = `${state.userName}と乾杯フレンドになろう🍻 リンクはSafari（ブラウザ）で開いてね`;
   if (navigator.share) {
     try { await navigator.share({ title: '酒育日記', text, url: link }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
-  try { await navigator.clipboard.writeText(link); alert('招待リンクをコピーしたよ！LINEとかで送ってね🍻'); }
+  try { await navigator.clipboard.writeText(link); alert('招待リンクをコピーしたよ！好きなアプリで送ってね🍻'); }
   catch (e) { prompt('この招待リンクを友達に送ってね', link); }
 };
+
+// フレンドリスト（フィード取得時に更新・オフライン時はキャッシュ表示）
+function renderFriendChips(list) {
+  const el = document.getElementById('friendChips');
+  if (!list || !list.length) {
+    el.innerHTML = '<span class="friendChip none">まだフレンドがいないよ。上のボタンでさそってみよう</span>';
+    return;
+  }
+  el.innerHTML = `<span class="friendChip label">👥 フレンド ${list.length}人</span>` +
+    list.map(f => `<span class="friendChip">${esc(f.name || '？')}</span>`).join('');
+}
 
 let pendingInvite = null;
 function clearInviteHash() {
@@ -926,7 +966,8 @@ async function acceptInvite(inv) {
   }
   if (!confirm(`「${inv.name}」と乾杯フレンドになる？🍻`)) { clearInviteHash(); return; }
   try {
-    await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
+    const d = await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
+    if (d.friends) { state.friendsCache = d.friends; saveState(); }
     clearInviteHash();
     let msg = `${inv.name}と友達になった！🍻ボタンのフィードでお互いの乾杯が見られるよ`;
     if (!matchMedia('(display-mode: standalone)').matches) {

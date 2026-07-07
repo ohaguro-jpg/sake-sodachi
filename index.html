@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=16">
+<link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
 
@@ -87,6 +87,17 @@
   </div>
 </section>
 
+<!-- ===== 友達を招待シート ===== -->
+<div id="inviteSheet" class="sheet" hidden>
+  <div class="sheetInner">
+    <div class="sheetHead"><span class="fCal">友達を招待</span><button class="iconBtn" id="btnInviteClose">✕</button></div>
+    <button class="inviteBtn line" id="btnInviteLine">LINEで送る</button>
+    <button class="inviteBtn insta" id="btnInviteInsta">Instagramで送る</button>
+    <button class="inviteBtn other" id="btnInviteOther">その他の方法で送る</button>
+    <p class="editHint" style="text-align:center">インスタはリンクの自動添付ができないから、コピーした招待メッセージをDMに貼ってね。<br>受け取った友達には、リンクを<b>Safari（ブラウザ）で開いて</b>もらってね🙏</p>
+  </div>
+</div>
+
 <!-- ===== 酒ルーレット ===== -->
 <div id="rouletteSheet" class="sheet" hidden>
   <div class="sheetInner" style="text-align:center">
@@ -133,6 +144,7 @@
     <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
   </div>
   <button id="btnInvite" class="btnGhost" style="margin-top:0">🍻 友達をさそう（リンクを送る）</button>
+  <div id="friendChips" class="friendChips"></div>
   <div class="ctrlRow" style="justify-content:center">
     <span class="ctrlLbl">のせる範囲</span>
     <div class="segGroup" id="visSeg">
@@ -175,7 +187,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
+<script src="js/data.js?v=17"></script>
+<script src="js/app.js?v=17"></script>
 </body>
 </html>
