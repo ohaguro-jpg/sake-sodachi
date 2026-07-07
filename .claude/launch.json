@@ -2,10 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "sake-sodachi",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4433", "-d", "/Users/yuji/sake-sodachi"],
-      "port": 4433
+      "name": "sake-sodachi-fx",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "python3 -m http.server $PORT -d /Users/yuji/sake-sodachi"],
+      "port": 4434,
+      "autoPort": true
     }
   ]
 }

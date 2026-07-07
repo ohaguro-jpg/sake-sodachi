@@ -121,16 +121,16 @@ function renderHome() {
     lbl.textContent = '育ちきった！（相棒画面で次の子を迎えられるよ）';
   } else {
     const lo = LEVEL_THRESHOLDS[lv - 1], hi = LEVEL_THRESHOLDS[lv];
-    bar.style.width = `${Math.round((pts - lo) / (hi - lo) * 100)}%`;
-    lbl.textContent = `つぎの進化まで あと${hi - pts}pt`;
+    const pct = Math.round((pts - lo) / (hi - lo) * 100);
+    bar.style.width = `${pct}%`;
+    lbl.textContent = pct >= 70 ? 'つぎの進化まで、もうすこし！' : '毎日パシャっとすると育つよ';
   }
-  document.getElementById('statPoints').textContent = pts;
   document.getElementById('statDays').textContent = new Set(state.records.map(r => r.date)).size;
   document.getElementById('statStreak').textContent = streakDays();
   const st = document.getElementById('todayStatus');
   const btn = document.getElementById('btnShoot');
   if (hasRecordToday()) {
-    st.innerHTML = '<span class="done">今日はもう乾杯済み 🍻</span>（撮り直してもポイントは1日1回だよ）';
+    st.innerHTML = '<span class="done">今日はもう乾杯済み 🍻</span>（育つのは1日1回、写真は何枚でもOK）';
     btn.textContent = '📸 おかわりでパシャ';
   } else {
     st.textContent = '今日の一枚、まだだよ';
@@ -214,12 +214,12 @@ function openEditor() {
     shape: r.shape,
     beauty: 0.35,
     stamp: { fx: r.fx, fy: r.fy, size: 24, rot: r.rot },
-    chara: { fx: .8, fy: .8, size: 26, rot: 0 },
+    chara: { fx: .76, fy: .78, size: 38, rot: 0 },
     selected: 'stamp'
   };
+  show('screen-edit');   // getBBox のため先に表示
   drawEditCanvas();
   renderOverlays();
-  show('screen-edit');
 }
 
 // ひとことのおかわり（スタンプをタップ）
@@ -279,9 +279,17 @@ function renderOverlays() {
   const c = edit.chara;
   const pts = state.buddyPoints[state.buddy] || 0;
   oc.innerHTML = charSvgInline(state.buddy, levelOf(pts));
-  const w = c.size * 4.6;
-  oc.querySelector('svg').style.width = w + 'px';
-  oc.querySelector('svg').style.height = w + 'px';
+  // 絵の実寸で正規化（Lv1の小さい子も写真の中でちゃんと見えるサイズに）
+  const svgEl = oc.querySelector('svg');
+  if (!c.artMax) {
+    try {
+      const b = svgEl.getBBox();
+      c.artMax = Math.max(b.width, b.height) || 120;
+    } catch (e) { c.artMax = 120; }
+  }
+  const w = c.size * 4.6 * (120 / c.artMax);
+  svgEl.style.width = w + 'px';
+  svgEl.style.height = w + 'px';
   oc.style.left = c.fx * 100 + '%';
   oc.style.top = c.fy * 100 + '%';
   oc.style.transform = `translate(-50%,-50%) rotate(${c.rot}deg)`;
@@ -389,7 +397,7 @@ async function drawCharaToCanvas(ctx, scale) {
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   const img = new Image();
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-  const w = c.size * 4.6 * scale;
+  const w = c.size * 4.6 * (120 / (c.artMax || 120)) * scale;
   ctx.save();
   ctx.translate(c.fx * FINAL_W, c.fy * FINAL_H);
   ctx.rotate(c.rot * Math.PI / 180);
@@ -487,24 +495,63 @@ function drawStampToCanvas(ctx, scale) {
   ctx.restore();
 }
 
-// ---------- 保存完了・進化演出 ----------
+// ---------- 保存完了・進化演出（3D風ド派手版） ----------
+const CONFETTI_COLORS = ['#e8a33d', '#b3362f', '#3b5b8c', '#7d9b4e', '#efc75e', '#fffcf2'];
+function spawnConfetti(n) {
+  const layer = document.getElementById('celebrateConfetti');
+  layer.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i');
+    const x0 = Math.random() * 100;
+    p.style.setProperty('--x0', x0 + 'vw');
+    p.style.setProperty('--x1', (x0 + (Math.random() * 40 - 20)) + 'vw');
+    p.style.setProperty('--rz', (Math.random() * 900 + 360) + 'deg');
+    p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    p.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+    p.style.animationDelay = (Math.random() * .5) + 's';
+    p.style.width = (7 + Math.random() * 7) + 'px';
+    p.style.height = (10 + Math.random() * 8) + 'px';
+    layer.appendChild(p);
+  }
+}
+function spawnRings(n) {
+  const box = document.getElementById('celebrateRings');
+  box.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const r = document.createElement('b');
+    r.style.animationDelay = (i * .22) + 's';
+    box.appendChild(r);
+  }
+}
 function showCelebrate(pts, prevLv, newLv, first) {
   const evolved = newLv > prevLv;
   const c = CHARACTERS[state.buddy];
+  const cel = document.getElementById('celebrate');
   document.getElementById('celebrateChar').innerHTML = charSvgInline(state.buddy, newLv);
-  document.getElementById('celebrateChar').className = 'celebrateChar' + (evolved ? ' evolve' : '');
-  document.getElementById('celebrateBurst').innerHTML = evolved
-    ? `<svg viewBox="0 0 120 120"><use href="#burst" transform="translate(60,60) scale(1.6)"/></svg>` : '';
+  document.getElementById('celebrateChar').className =
+    'celebrateChar ' + (evolved ? 'evolve3d' : 'pop3d');
+  document.getElementById('celebrateRays').className =
+    'celebrateRays' + (evolved ? ' big' : '');
+  document.getElementById('celebrateFlash').className =
+    'celebrateFlash' + (evolved ? ' go' : '');
+  spawnRings(evolved ? 3 : 0);
+  spawnConfetti(evolved ? 40 : (first ? 18 : 0));
   document.getElementById('celebrateTitle').textContent =
     evolved ? `${c.levels[newLv - 1].name} に進化！！` : '今日も乾杯！';
   document.getElementById('celebratePts').textContent =
-    first ? `+${pts} pt` : 'ポイントは今日はもう獲得済み';
+    evolved ? 'ドドーン！！' : (first ? '相棒がそだった！' : '（育つのは1日1回だよ）');
   document.getElementById('celebrateNote').textContent =
     evolved ? c.levels[newLv - 1].sub : '写真はカメラロールに保存したよ。また明日、乾杯🍻';
-  document.getElementById('celebrate').hidden = false;
+  cel.hidden = false;
 }
 document.getElementById('btnCelebrateOk').onclick = () => {
   document.getElementById('celebrate').hidden = true;
+  // 次回のアニメが再発火するようにリセット
+  document.getElementById('celebrateChar').className = 'celebrateChar';
+  document.getElementById('celebrateFlash').className = 'celebrateFlash';
+  document.getElementById('celebrateRays').className = 'celebrateRays';
+  document.getElementById('celebrateConfetti').innerHTML = '';
+  document.getElementById('celebrateRings').innerHTML = '';
   renderHome();
   show('screen-home');
 };
@@ -531,7 +578,7 @@ function openViewer(r) {
   document.getElementById('viewerImg').src = r.thumb;
   const c = CHARACTERS[r.charId];
   document.getElementById('viewerInfo').innerHTML =
-    `「${r.phrase}」<br>+${r.pts}pt／相棒: ${c.name}`;
+    `「${r.phrase}」<br>相棒: ${c.name}`;
   document.getElementById('albumViewer').hidden = false;
 }
 document.getElementById('btnViewerClose').onclick = () => { document.getElementById('albumViewer').hidden = true; };
@@ -557,7 +604,7 @@ function renderBuddy() {
     card.className = 'charCard' + (isCur ? ' selected' : '') + (locked ? ' locked' : '');
     card.innerHTML = `${isCur ? '<span class="badge">相棒</span>' : ''}${charSvgInline(id, lv)}
       <div class="nm">${c.levels[lv - 1].name}</div>
-      <div class="mt">${c.motif}／Lv.${lv}・${pts}pt</div>
+      <div class="mt">${c.motif}／Lv.${lv}</div>
       <div class="cardBar"><i style="width:${pct}%"></i></div>`;
     if (!locked && !isCur) {
       card.onclick = () => {

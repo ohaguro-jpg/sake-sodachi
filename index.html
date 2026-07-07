@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 
@@ -47,7 +47,6 @@
     </div>
   </div>
   <div class="homeStats">
-    <div class="stat"><div class="statNum" id="statPoints">0</div><div class="statLbl">ポイント</div></div>
     <div class="stat"><div class="statNum" id="statDays">0</div><div class="statLbl">乾杯した日</div></div>
     <div class="stat"><div class="statNum" id="statStreak">0</div><div class="statLbl">連続日数</div></div>
   </div>
@@ -101,8 +100,11 @@
 
 <!-- ===== 保存完了・進化演出 ===== -->
 <div id="celebrate" class="celebrate" hidden>
+  <div id="celebrateFlash" class="celebrateFlash"></div>
+  <div id="celebrateConfetti" class="confettiLayer"></div>
   <div class="celebrateInner">
-    <div id="celebrateBurst" class="celebrateBurst"></div>
+    <div id="celebrateRays" class="celebrateRays"></div>
+    <div id="celebrateRings" class="celebrateRings"></div>
     <div id="celebrateChar" class="celebrateChar"></div>
     <div id="celebrateTitle" class="celebrateTitle fCal"></div>
     <div id="celebratePts" class="celebratePts"></div>
@@ -142,7 +144,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js"></script>
-<script src="js/app.js"></script>
+<script src="js/data.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
 </body>
 </html>
