@@ -7,6 +7,9 @@ const FINAL_W = 1080, FINAL_H = 1440;
 const API_BASE = 'https://sake-sodachi-api.vercel.app/api';
 // 招待リンクは常に本番URLに固定（ローカルIPだと同じWi-Fiの人しか開けないため）
 const SITE_URL = 'https://ohaguro-jpg.github.io/sake-sodachi/';
+// 管理者：名前欄（またはフレンドのコード欄）にこの合言葉を入れると管理者画面へ
+const ADMIN_PHRASE = 'ナタデココは府中1';
+const ADMIN_KEY = 'sakeadmin_84ccd68f59b612d6';   // ※公開JSに載る簡易キー
 
 let state = loadState();
 let stream = null;
@@ -105,7 +108,10 @@ function renderStart() {
   });
   checkStartReady();
 }
-document.getElementById('nameInput').addEventListener('input', checkStartReady);
+document.getElementById('nameInput').addEventListener('input', (e) => {
+  if (e.target.value.trim() === ADMIN_PHRASE) { e.target.value = ''; openAdmin(); return; }
+  checkStartReady();
+});
 document.getElementById('btnStartConfirm').onclick = () => {
   const name = document.getElementById('nameInput').value.trim();
   if (!startPick || !name) return;
@@ -206,6 +212,9 @@ function goHome() {
 document.getElementById('btnShoot').onclick = openCamera;
 document.getElementById('btnBuddySwitch').onclick = () => { renderBuddy(); show('screen-buddy'); };
 document.getElementById('btnToAlbum').onclick = () => { renderAlbum(); show('screen-album'); };
+// クリックでも育成⇄フィードを行き来できる（マウス＝PCでもスワイプ不要）
+document.getElementById('navToFeed').onclick = goFeedPanel;
+document.getElementById('navToHome').onclick = goHomePanel;
 
 // ---------- 撮影 ----------
 async function openCamera() {
@@ -290,6 +299,7 @@ function openEditor() {
     chara: { fx: .76, fy: .78, size: 38, rot: 0 },
     selected: 'stamp'
   };
+  document.getElementById('captionInput').value = '';
   show('screen-edit');   // getBBox のため先に表示
   document.getElementById('ovDay').textContent = `乾杯 ${kanpaiDayN()}日目`;
   drawEditCanvas();
@@ -945,21 +955,60 @@ async function renderFeed() {
       return;
     }
     listEl.innerHTML = '';
-    d.items.forEach(m => {
-      const c = CHARACTERS[m.charId];
-      const div = document.createElement('div');
-      div.className = 'feedCard';
-      div.innerHTML = `<img loading="lazy" src="${esc(m.img)}" alt="">
-        <div class="feedMeta"><b>${esc(m.name)}</b> × ${c ? c.levels[(m.lv || 1) - 1].name : '相棒'}
-        <span class="feedTime">${timeAgo(m.ts)}${m.uid === state.uid ? '・自分' : ''}${m.vis === 'all' ? '・みんな公開' : ''}</span><br>
-        <span class="fCal">乾杯 ${m.dayN}日目</span>　「${esc(m.phrase)}」</div>`;
-      listEl.appendChild(div);
-    });
+    d.items.forEach(m => listEl.appendChild(feedCardEl(m, false)));
   } catch (e) {
     listEl.innerHTML = '<div class="albumEmpty">よみこめなかった…😢<br>電波を確認して🔄で更新してみて</div>';
   }
 }
 document.getElementById('btnFeedReload').onclick = renderFeed;
+
+// 1件のフィードカードを組み立て（admin=true なら投稿者名とuidも表示・常に削除可）
+function feedCardEl(m, admin) {
+  const c = CHARACTERS[m.charId];
+  const mine = m.uid === state.uid;
+  const div = document.createElement('div');
+  div.className = 'feedCard';
+  const capHtml = m.caption ? `<div class="feedCaption">${esc(m.caption)}</div>` : '';
+  const delBtn = (mine || admin) ? `<button class="feedDel">🗑 削除</button>` : '';
+  div.innerHTML = `<img loading="lazy" src="${esc(m.img)}" alt="">
+    <div class="feedMeta"><b>${esc(m.name)}</b> × ${c ? c.levels[(m.lv || 1) - 1].name : '相棒'}
+    <span class="feedTime">${timeAgo(m.ts)}${mine ? '・自分' : ''}${m.vis === 'all' ? '・みんな公開' : '・友達だけ'}</span><br>
+    <span class="fCal">乾杯 ${m.dayN}日目</span>　「${esc(m.phrase)}」${capHtml}
+    ${admin ? `<div class="feedTime">uid:${esc(m.uid)}</div>` : ''}</div>
+    ${delBtn ? `<div class="feedActions">${delBtn}</div>` : ''}`;
+  const db = div.querySelector('.feedDel');
+  if (db) db.onclick = async () => {
+    if (!confirm('この投稿を削除する？もとに戻せないよ')) return;
+    db.disabled = true; db.textContent = '削除中…';
+    try {
+      await api('/delete', 'POST', { requesterUid: state.uid, targetUid: m.uid, ts: m.ts, adminKey: admin ? ADMIN_KEY : undefined });
+      div.remove();
+    } catch (e) { db.disabled = false; db.textContent = '🗑 削除'; alert('削除できなかった…電波を確認してもう一回'); }
+  };
+  return div;
+}
+
+// ---------- 管理者画面（全ユーザーの投稿を見る・消せる） ----------
+async function openAdmin() {
+  show('screen-admin');
+  await renderAdmin();
+}
+async function renderAdmin() {
+  const listEl = document.getElementById('adminList');
+  const info = document.getElementById('adminInfo');
+  listEl.innerHTML = '<div class="albumEmpty">よみこみ中…🍶</div>';
+  try {
+    const d = await api(`/admin?key=${encodeURIComponent(ADMIN_KEY)}`);
+    info.textContent = `全ユーザーの投稿 ${d.items.length}件（新しい順）`;
+    if (!d.items.length) { listEl.innerHTML = '<div class="albumEmpty">まだ投稿がないよ</div>'; return; }
+    listEl.innerHTML = '';
+    d.items.forEach(m => listEl.appendChild(feedCardEl(m, true)));
+  } catch (e) {
+    listEl.innerHTML = '<div class="albumEmpty">よみこめなかった…😢<br>キーが違うか、電波を確認して🔄</div>';
+  }
+}
+document.getElementById('btnAdminBack').onclick = goHome;
+document.getElementById('btnAdminReload').onclick = renderAdmin;
 
 // ---------- フレンドコード（コピペで追加。リンクを開く必要なし＝アプリ内ブラウザ・Wi-Fi無関係） ----------
 function encodeCode(uid, name) {
@@ -1049,6 +1098,7 @@ document.getElementById('btnCopyCode').onclick = async () => {
 
 document.getElementById('btnAddByCode').onclick = async () => {
   const raw = document.getElementById('codeInput').value;
+  if (raw.trim() === ADMIN_PHRASE) { document.getElementById('codeInput').value = ''; openAdmin(); return; }
   const inv = decodeCode(raw);
   if (!inv) { alert('コードが正しくないみたい🙏\nSAKE- から始まるコードを、まるごと貼り付けてね'); return; }
   const b = document.getElementById('btnAddByCode');
@@ -1111,10 +1161,11 @@ async function postToFeed() {
   cv.getContext('2d').drawImage(lastShot, 0, 0, 720, 960);
   const img = cv.toDataURL('image/jpeg', .8).split(',')[1];
   const pts = state.buddyPoints[state.buddy] || 0;
+  const caption = document.getElementById('captionInput').value.trim();
   return api('/post', 'POST', {
     uid: state.uid, name: state.userName,
     charId: state.buddy, lv: levelOf(pts), dayN: kanpaiDayN(),
-    phrase: edit.phrase, vis: state.share.vis, img
+    phrase: edit.phrase, caption, vis: state.share.vis, img
   });
 }
 

@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=21">
 </head>
 <body>
 
@@ -44,6 +44,7 @@
       <!-- 左パネル：みんなの乾杯（友達フィード） -->
       <section class="panel panelFeed">
         <div class="feedTitle fCal">みんなの乾杯 🍻</div>
+        <div class="panelNav" id="navToHome">🐣 育成にもどる →</div>
         <div id="friendChips" class="friendChips"></div>
         <div class="ctrlRow" style="justify-content:center">
           <span class="ctrlLbl">のせる範囲</span>
@@ -69,7 +70,7 @@
             <div class="stat"><div class="statNum" id="statStreak">0</div><div class="statLbl">連続日数</div></div>
           </div>
           <button class="btnGhost" id="btnBuddySwitch" style="margin-top:12px">🐣 相棒をかえる・ずかん</button>
-          <div class="peekHint">← よこにスワイプで<br>みんなの乾杯 🍻</div>
+          <div class="peekHint" id="navToFeed">← みんなの乾杯をみる 🍻</div>
         </div>
       </section>
     </div>
@@ -105,7 +106,8 @@
     <div id="ovChara" class="overlay"></div>
   </div>
   <div class="editPanel">
-    <p class="editHint">ひとことはタップするとおかわりが出るよ 🎲　スタンプと相棒はドラッグで移動できるよ</p>
+    <input id="captionInput" class="captionInput" type="text" maxlength="40" placeholder="ひとことコメント（任意）フィードに表示されるよ" autocomplete="off">
+    <p class="editHint">写真の中のスタンプはタップでおかわり🎲　スタンプと相棒はドラッグで移動できるよ</p>
   </div>
 </section>
 
@@ -175,6 +177,17 @@
   <div id="friendListFull" class="friendListFull"></div>
 </section>
 
+<!-- ===== 管理者画面 ===== -->
+<section id="screen-admin" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnAdminBack">←</button>
+    <div class="editTitle fCal">管理者</div>
+    <button class="iconBtn" id="btnAdminReload" title="更新">🔄</button>
+  </div>
+  <p class="sub" id="adminInfo">全ユーザーの投稿（新しい順）</p>
+  <div id="adminList" class="feedList"></div>
+</section>
+
 <!-- ===== アルバム ===== -->
 <section id="screen-album" class="screen">
   <div class="editTop">
@@ -206,7 +219,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=20"></script>
-<script src="js/app.js?v=20"></script>
+<script src="js/data.js?v=21"></script>
+<script src="js/app.js?v=21"></script>
 </body>
 </html>

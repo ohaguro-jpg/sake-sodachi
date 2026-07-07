@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (cors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
   try {
-    const { uid, name, charId, lv, dayN, phrase, vis, img } = req.body || {};
+    const { uid, name, charId, lv, dayN, phrase, caption, vis, img } = req.body || {};
     if (badUid(uid)) return res.status(400).json({ error: 'bad-uid' });
     if (!img || typeof img !== 'string') return res.status(400).json({ error: 'no-img' });
     if (!['friends', 'all'].includes(vis)) return res.status(400).json({ error: 'bad-vis' });
@@ -33,7 +33,8 @@ export default async function handler(req, res) {
       lv: Math.max(1, Math.min(5, parseInt(lv) || 1)),
       dayN: Math.max(1, Math.min(99999, parseInt(dayN) || 1)),
       phrase: String(phrase || '').slice(0, 30),
-      vis, img: photo.url
+      caption: String(caption || '').slice(0, 40),
+      vis, img: photo.url, photoPath: photo.pathname
     };
     await put(`feed/${String(99999999999999 - ts)}.json`, JSON.stringify(meta), {
       access: 'public', contentType: 'application/json', addRandomSuffix: true

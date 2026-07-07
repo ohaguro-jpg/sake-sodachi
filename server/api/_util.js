@@ -27,3 +27,19 @@ export function todayJST() {
 export function badUid(uid) {
   return typeof uid !== 'string' || !/^[a-f0-9]{24,64}$/.test(uid);
 }
+
+// 管理者キー（Vercel環境変数。未設定なら管理者機能は無効）
+export const ADMIN_KEY = process.env.ADMIN_KEY || '';
+export function isAdmin(key) {
+  return !!ADMIN_KEY && typeof key === 'string' && key === ADMIN_KEY;
+}
+
+// フィードのメタ一覧を新しい順に取得（vis無視・生データ）
+export async function listFeedMetas(limit = 60) {
+  const { blobs } = await list({ prefix: 'feed/', limit: Math.min(300, limit * 3) });
+  const sorted = blobs.sort((a, b) => a.pathname.localeCompare(b.pathname)).slice(0, limit);
+  const metas = await Promise.all(sorted.map(b =>
+    fetch(b.url).then(r => r.ok ? r.json() : null).then(m => m ? { ...m, _metaUrl: b.url } : null).catch(() => null)
+  ));
+  return metas.filter(Boolean);
+}
