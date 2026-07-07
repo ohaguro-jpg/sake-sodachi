@@ -821,17 +821,84 @@ function renderBuddy() {
 }
 document.getElementById('btnBuddyBack').onclick = goHome;
 
-// ---------- 酒ルーレット ----------
+// ---------- 酒ゲーム（ルーレット／スロット／あみだ）＋出目ごと3D演出 ----------
+// fx: 出目ごとの演出タイプ。sub: 演出中の一言。
 const ROULETTE_ITEMS = [
-  { label: 'ビール',   color: '#e8a33d', bonus: 2,  stars: '★' },
-  { label: 'テキーラ', color: '#7d9b4e', bonus: 4,  stars: '★★' },
-  { label: 'ブーブ',   color: '#b3362f', bonus: 8,  stars: '★★★' },
-  { label: 'ドンペリ', color: '#3b5b8c', bonus: 15, stars: '★★★★★' },
-  { label: 'スナック', color: '#c9403a', bonus: 5,  stars: '★★' },
-  { label: '赤ワイン', color: '#6e211b', bonus: 3,  stars: '★' }
+  { key: 'beer',    label: 'ビール',   emoji: '🍺', color: '#e8a33d', bonus: 2,  stars: '★',      fx: 'rise',    sub: 'とりあえず生！泡が主役' },
+  { key: 'tequila', label: 'テキーラ', emoji: '🥃', color: '#7d9b4e', bonus: 4,  stars: '★★',     fx: 'tilt',    sub: 'ワン・ツー・テキーラ！世界が回る' },
+  { key: 'boob',    label: 'ブーブ',   emoji: '🍾', color: '#b3362f', bonus: 8,  stars: '★★★',    fx: 'rocket',  sub: 'ポンッ！開けてもらった夜' },
+  { key: 'dom',     label: 'ドンペリ', emoji: '👑', color: '#3b5b8c', bonus: 15, stars: '★★★★★', fx: 'rainbow', sub: '最高級の一本、降臨' },
+  { key: 'snack',   label: 'スナック', emoji: '🪩', color: '#c9403a', bonus: 5,  stars: '★★',     fx: 'disco',   sub: 'ネオン灯る、大人の夜' },
+  { key: 'wine',    label: '赤ワイン', emoji: '🍷', color: '#6e211b', bonus: 3,  stars: '★',      fx: 'calm',    sub: 'ゆっくり、しっとり大人時間' }
 ];
-let wheelAngle = 0, spinning = false, wheelBuilt = false;
+function pickOutcome() { return ROULETTE_ITEMS[Math.floor(Math.random() * ROULETTE_ITEMS.length)]; }
 
+// ゲーム結果を確定 → ボーナス記憶 → 3D演出
+function onGameResult(it) {
+  state.roulette = { date: todayStr(), label: it.label, bonus: it.bonus };
+  saveState();
+  fireResult(it);
+}
+
+// ---- 出目ごとの3D演出 ----
+let fxTimer = null;
+function fireResult(it) {
+  const fx = document.getElementById('resultFx');
+  clearTimeout(fxTimer);
+  fx.className = 'resultFx fx-' + it.fx;
+  document.getElementById('rfxIcon').textContent = it.emoji;
+  const big = it.bonus >= 8;
+  document.getElementById('rfxText').textContent = big
+    ? (it.bonus >= 15 ? `激アツ！！\n${it.label}大当たり！` : `大当たり！！\n${it.label}`)
+    : `今夜は\n${it.label}！`;
+  document.getElementById('rfxSub').textContent = `${it.sub}　育ちボーナス ${it.stars}`;
+  // パーティクル（演出ごとに絵柄・量を変える）
+  const layer = document.getElementById('rfxParticles');
+  layer.innerHTML = '';
+  const conf = {
+    beer:   { glyphs: ['🫧', '○', '◦', '🍺'], n: 26, cls: 'pBeer' },
+    tequila:{ glyphs: ['🌵', '🍋', '☀'],       n: 14, cls: 'pFloat' },
+    rocket: { glyphs: ['🍾', '✨', '🥂', '✦'],  n: 30, cls: 'pFall' },
+    rainbow:{ glyphs: ['👑', '✦', '✨', '🥂', '★'], n: 40, cls: 'pFall' },
+    disco:  { glyphs: ['🪩', '✦', '💜', '✨'],   n: 22, cls: 'pFloat' },
+    calm:   { glyphs: ['·', '✦', '🍷'],         n: 14, cls: 'pDrift' }
+  }[it.fx] || { glyphs: ['✦'], n: 12, cls: 'pFall' };
+  for (let i = 0; i < conf.n; i++) {
+    const s = document.createElement('i');
+    s.className = conf.cls;
+    s.textContent = conf.glyphs[i % conf.glyphs.length];
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.fontSize = (14 + Math.random() * 26) + 'px';
+    s.style.animationDuration = (1.3 + Math.random() * 1.8) + 's';
+    s.style.animationDelay = (Math.random() * .9) + 's';
+    layer.appendChild(s);
+  }
+  fx.hidden = false;
+  const dur = it.fx === 'calm' ? 3800 : (big ? 3400 : 2800);
+  fxTimer = setTimeout(() => { fx.hidden = true; fx.className = 'resultFx'; }, dur);
+}
+// タップで演出スキップ
+document.getElementById('resultFx').onclick = () => {
+  clearTimeout(fxTimer);
+  document.getElementById('resultFx').hidden = true;
+  document.getElementById('resultFx').className = 'resultFx';
+};
+
+// ---- ゲーム選択 ----
+document.getElementById('btnRouletteOpen').onclick = () => { document.getElementById('gameSheet').hidden = false; };
+document.getElementById('btnGameClose').onclick = () => { document.getElementById('gameSheet').hidden = true; };
+document.querySelectorAll('.gameBtn').forEach(b => {
+  b.onclick = () => {
+    document.getElementById('gameSheet').hidden = true;
+    const g = b.dataset.g;
+    if (g === 'roulette') openRoulette();
+    else if (g === 'slot') openSlot();
+    else openAmida();
+  };
+});
+
+// ---- ① ルーレット ----
+let wheelAngle = 0, spinning = false, wheelBuilt = false;
 function buildWheel() {
   const n = ROULETTE_ITEMS.length, R = 98;
   let parts = '';
@@ -842,7 +909,7 @@ function buildWheel() {
     const x1 = 100 + R * Math.cos(a1), y1 = 100 + R * Math.sin(a1);
     parts += `<path d="M100 100 L${x0.toFixed(2)} ${y0.toFixed(2)} A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)} z" fill="${it.color}" stroke="#262019" stroke-width="2.5"/>`;
     const mid = (i + .5) * 360 / n;
-    parts += `<text x="100" y="40" text-anchor="middle" transform="rotate(${mid} 100 100)" fill="#fffcf2" font-size="14" font-family="'Yuji Boku','Yuji Syuku',serif">${it.label}</text>`;
+    parts += `<text x="100" y="40" text-anchor="middle" transform="rotate(${mid} 100 100)" fill="#fffcf2" font-size="13" font-family="'Yuji Boku','Yuji Syuku',serif">${it.label}</text>`;
   });
   document.getElementById('wheel').innerHTML =
     `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="${R}" fill="none" stroke="#262019" stroke-width="5"/>${parts}` +
@@ -850,7 +917,11 @@ function buildWheel() {
     `<text x="100" y="105.5" text-anchor="middle" font-size="13" fill="#262019" font-family="'Yuji Boku',serif">酒</text></svg>`;
   wheelBuilt = true;
 }
-
+function openRoulette() {
+  if (!wheelBuilt) buildWheel();
+  document.getElementById('rouletteResult').textContent = '';
+  document.getElementById('rouletteSheet').hidden = false;
+}
 function spinRoulette() {
   if (spinning) return;
   spinning = true;
@@ -859,7 +930,6 @@ function spinRoulette() {
   const n = ROULETTE_ITEMS.length;
   const win = Math.floor(Math.random() * n);
   const jitter = Math.random() * 36 - 18;
-  // 当たりセクター中心が針（真上）に来る絶対角度へ、4回転以上足して着地
   const d = ((360 - (win + .5) * 360 / n + jitter) % 360 + 360) % 360;
   let target = wheelAngle + 1440;
   target += ((d - (target % 360)) % 360 + 360) % 360;
@@ -870,48 +940,140 @@ function spinRoulette() {
   setTimeout(() => {
     spinning = false;
     const it = ROULETTE_ITEMS[win];
-    // 今日のボーナスとして記憶（その日のうちに撮ると相棒がグッと育つ）
-    state.roulette = { date: todayStr(), label: it.label, bonus: it.bonus };
-    saveState();
     res.innerHTML = `今夜は「${it.label}」！🍻<div class="rouletteBonus">育ちボーナス ${it.stars}</div>`;
-    if (it.bonus >= 8) fireJackpot(it);   // ブーブ・ドンペリは大当たり演出
+    onGameResult(it);
   }, 3300);
 }
-
-// パチンコ風大当たり演出（ストロボ＋高速回転光＋キラキラ降下＋シェイク。ドンペリは虹色）
-function fireJackpot(it) {
-  const jp = document.getElementById('jackpot');
-  jp.classList.toggle('rainbow', it.bonus >= 15);
-  document.getElementById('jpText').textContent =
-    it.bonus >= 15 ? `激アツ！！\n${it.label}大当たり！` : `大当たり！！\n${it.label}`;
-  const stars = document.getElementById('jpStars');
-  stars.innerHTML = '';
-  const glyphs = ['✦', '✧', '★', '🍾', '✨', '🥂'];
-  for (let i = 0; i < 40; i++) {
-    const s = document.createElement('i');
-    s.textContent = glyphs[i % glyphs.length];
-    s.style.left = Math.random() * 100 + 'vw';
-    s.style.fontSize = (16 + Math.random() * 28) + 'px';
-    s.style.animationDuration = (1.2 + Math.random() * 1.8) + 's';
-    s.style.animationDelay = (Math.random() * .9) + 's';
-    stars.appendChild(s);
-  }
-  jp.hidden = false;
-  const inner = document.querySelector('#rouletteSheet .sheetInner');
-  inner.classList.add('shake');
-  setTimeout(() => {
-    jp.hidden = true;
-    inner.classList.remove('shake');
-  }, 3200);
-}
-
-document.getElementById('btnRouletteOpen').onclick = () => {
-  if (!wheelBuilt) buildWheel();
-  document.getElementById('rouletteResult').textContent = '';
-  document.getElementById('rouletteSheet').hidden = false;
-};
 document.getElementById('btnRouletteClose').onclick = () => { document.getElementById('rouletteSheet').hidden = true; };
 document.getElementById('wheel').addEventListener('click', spinRoulette);
+
+// ---- ② スロット（3リールが奥→手前に3D回転して止まる） ----
+const SLOT_H = 66;                // 1コマの高さ(px)
+let slotSpinning = false;
+function fillReel(id, seq) {
+  document.getElementById(id).innerHTML = seq.map(e => `<div class="reelCell">${e}</div>`).join('');
+}
+function openSlot() {
+  slotSpinning = false;
+  document.getElementById('slotResult').textContent = '';
+  const emojis = ROULETTE_ITEMS.map(x => x.emoji);
+  [0, 1, 2].forEach(r => {
+    fillReel('reel' + r, Array.from({ length: 8 }, () => emojis[Math.floor(Math.random() * emojis.length)]));
+    document.getElementById('reel' + r).style.transition = 'none';
+    document.getElementById('reel' + r).style.transform = 'translateY(0)';
+  });
+  document.getElementById('slotSheet').hidden = false;
+}
+function spinSlot() {
+  if (slotSpinning) return;
+  slotSpinning = true;
+  document.getElementById('slotResult').textContent = '';
+  const it = pickOutcome();
+  const emojis = ROULETTE_ITEMS.map(x => x.emoji);
+  const jackpot = it.bonus >= 8;
+  const LOOPS = 6, LEN = LOOPS * emojis.length + emojis.length; // 十分な長さ
+  [0, 1, 2].forEach(r => {
+    // 中央リール(1)は必ず出目。大当たりは3つ揃える。それ以外の端リールはランダム
+    const target = (r === 1 || jackpot) ? it.emoji : emojis[Math.floor(Math.random() * emojis.length)];
+    const seq = Array.from({ length: LEN - 1 }, () => emojis[Math.floor(Math.random() * emojis.length)]);
+    seq.push(target);                     // 最後のコマが停止位置
+    fillReel('reel' + r, seq);
+    const reel = document.getElementById('reel' + r);
+    reel.style.transition = 'none';
+    reel.style.transform = 'translateY(0)';
+    // リフロー確定後にアニメ開始（リールごとに停止をずらす）
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const dist = (seq.length - 1) * SLOT_H;
+      reel.style.transition = `transform ${2 + r * 0.6}s cubic-bezier(.1,.75,.15,1)`;
+      reel.style.transform = `translateY(${-dist}px)`;
+    }));
+  });
+  setTimeout(() => {
+    slotSpinning = false;
+    document.getElementById('slotResult').innerHTML =
+      `${jackpot ? '揃った！！' : '今夜は'}「${it.label}」！🍻<div class="rouletteBonus">育ちボーナス ${it.stars}</div>`;
+    onGameResult(it);
+  }, 2000 + 2 * 600 + 250);
+}
+document.getElementById('btnSlotSpin').onclick = spinSlot;
+document.getElementById('btnSlotClose').onclick = () => { document.getElementById('slotSheet').hidden = true; };
+
+// ---- ③ あみだくじ（玉が縦線を3Dで転がり落ちて横線で曲がる。着地=出目） ----
+const AM_COLS = 6, AM_ROWS = 7, AM_W = 300, AM_H = 300, AM_PAD = 22;
+let amidaBusy = false;
+function amidaX(c) { return AM_PAD + c * (AM_W - AM_PAD * 2) / (AM_COLS - 1); }
+function amidaY(r) { return 34 + r * (AM_H - 60) / AM_ROWS; }
+function openAmida() {
+  amidaBusy = false;
+  document.getElementById('amidaResult').textContent = '';
+  document.getElementById('amidaHint').textContent = '上の◯をタップしてスタート！どこにたどり着くかな';
+  // ランダムな横線（同じ行で隣接どうしが被らないように）
+  const rungs = [];
+  for (let row = 1; row < AM_ROWS; row++) {
+    let c = 0;
+    while (c < AM_COLS - 1) {
+      if (Math.random() < 0.42) { rungs.push({ row, c }); c += 2; } else c += 1;
+    }
+  }
+  window.__amidaRungs = rungs;
+  // SVG描画
+  let s = `<svg viewBox="0 0 ${AM_W} ${AM_H}" class="amidaSvg">`;
+  for (let c = 0; c < AM_COLS; c++) s += `<line x1="${amidaX(c)}" y1="${amidaY(0)}" x2="${amidaX(c)}" y2="${amidaY(AM_ROWS)}" stroke="#cdbfa4" stroke-width="4" stroke-linecap="round"/>`;
+  rungs.forEach(g => { s += `<line x1="${amidaX(g.c)}" y1="${amidaY(g.row)}" x2="${amidaX(g.c + 1)}" y2="${amidaY(g.row)}" stroke="#cdbfa4" stroke-width="4" stroke-linecap="round"/>`; });
+  s += `<path id="amidaTrace" d="" fill="none" stroke="#b3362f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  s += `<circle id="amidaBall" r="9" fill="#b3362f" stroke="#262019" stroke-width="2" opacity="0"/>`;
+  // 上：タップ用の◯／下：お酒ラベル
+  for (let c = 0; c < AM_COLS; c++) {
+    s += `<circle class="amidaTop" data-c="${c}" cx="${amidaX(c)}" cy="${amidaY(0)}" r="12" fill="#fffcf2" stroke="#262019" stroke-width="3"/>`;
+    s += `<text x="${amidaX(c)}" y="${amidaY(AM_ROWS) + 20}" text-anchor="middle" font-size="15">${ROULETTE_ITEMS[c].emoji}</text>`;
+  }
+  s += `</svg>`;
+  document.getElementById('amidaBox').innerHTML = s;
+  document.querySelectorAll('.amidaTop').forEach(t => t.onclick = () => startAmida(parseInt(t.dataset.c)));
+  document.getElementById('amidaSheet').hidden = false;
+}
+function startAmida(startCol) {
+  if (amidaBusy) return;
+  amidaBusy = true;
+  document.querySelectorAll('.amidaTop').forEach(t => t.style.pointerEvents = 'none');
+  const rungs = window.__amidaRungs;
+  // 経路をたどる（あみだの正しい判定）
+  let c = startCol;
+  const pts = [[amidaX(c), amidaY(0)]];
+  for (let row = 1; row <= AM_ROWS; row++) {
+    pts.push([amidaX(c), amidaY(row)]);                       // 縦に降りる
+    const left = rungs.find(g => g.row === row && g.c === c - 1);
+    const right = rungs.find(g => g.row === row && g.c === c);
+    if (right) { c += 1; pts.push([amidaX(c), amidaY(row)]); }
+    else if (left) { c -= 1; pts.push([amidaX(c), amidaY(row)]); }
+  }
+  const it = ROULETTE_ITEMS[c];
+  // 玉をpath沿いに走らせる
+  const d = 'M' + pts.map(p => p.join(' ')).join(' L');
+  const trace = document.getElementById('amidaTrace');
+  const ball = document.getElementById('amidaBall');
+  trace.setAttribute('d', d);
+  const len = trace.getTotalLength();
+  trace.style.strokeDasharray = len;
+  trace.style.strokeDashoffset = len;
+  ball.setAttribute('opacity', '1');
+  const T = 2200, t0 = performance.now();
+  (function step(now) {
+    const k = Math.min(1, (now - t0) / T);
+    const e = 1 - Math.pow(1 - k, 2);
+    const pt = trace.getPointAtLength(len * e);
+    ball.setAttribute('cx', pt.x); ball.setAttribute('cy', pt.y);
+    trace.style.strokeDashoffset = len * (1 - e);
+    if (k < 1) requestAnimationFrame(step);
+    else {
+      document.getElementById('amidaResult').innerHTML =
+        `「${it.label}」に到着！🍻<div class="rouletteBonus">育ちボーナス ${it.stars}</div>`;
+      onGameResult(it);
+      amidaBusy = false;
+    }
+  })(t0);
+}
+document.getElementById('btnAmidaClose').onclick = () => { document.getElementById('amidaSheet').hidden = true; };
 
 // ---------- 乾杯フィード（フレンド機能） ----------
 async function api(path, method = 'GET', body) {

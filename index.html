@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=21">
+<link rel="stylesheet" href="css/style.css?v=22">
 </head>
 <body>
 
@@ -110,6 +110,55 @@
     <p class="editHint">写真の中のスタンプはタップでおかわり🎲　スタンプと相棒はドラッグで移動できるよ</p>
   </div>
 </section>
+
+<!-- ===== 今夜のゲーム選択 ===== -->
+<div id="gameSheet" class="sheet" hidden>
+  <div class="sheetInner" style="text-align:center">
+    <div class="sheetHead"><span class="fCal">今夜はどれで決める？🎲</span><button class="iconBtn" id="btnGameClose">✕</button></div>
+    <div class="gamePick">
+      <button class="gameBtn" data-g="roulette"><span class="gEmoji">🎡</span>ルーレット</button>
+      <button class="gameBtn" data-g="slot"><span class="gEmoji">🎰</span>スロット</button>
+      <button class="gameBtn" data-g="amida"><span class="gEmoji">🪜</span>あみだくじ</button>
+    </div>
+    <p class="editHint">出たお酒と一緒に今日の一枚を撮ると、相棒がグッと育つよ（ブーブ・ドンペリは大当たり🎰）</p>
+  </div>
+</div>
+
+<!-- ===== 酒スロット ===== -->
+<div id="slotSheet" class="sheet" hidden>
+  <div class="sheetInner" style="text-align:center">
+    <div class="sheetHead"><span class="fCal">酒スロット 🎰</span><button class="iconBtn" id="btnSlotClose">✕</button></div>
+    <div class="slotMachine">
+      <div class="reel"><div class="reelStrip" id="reel0"></div></div>
+      <div class="reel"><div class="reelStrip" id="reel1"></div></div>
+      <div class="reel"><div class="reelStrip" id="reel2"></div></div>
+      <div class="slotLine"></div>
+    </div>
+    <button class="btnPrimary" id="btnSlotSpin">レバーをひく 🕹</button>
+    <div id="slotResult" class="rouletteResult fCal"></div>
+  </div>
+</div>
+
+<!-- ===== 酒あみだくじ ===== -->
+<div id="amidaSheet" class="sheet" hidden>
+  <div class="sheetInner" style="text-align:center">
+    <div class="sheetHead"><span class="fCal">酒あみだくじ 🪜</span><button class="iconBtn" id="btnAmidaClose">✕</button></div>
+    <div id="amidaBox" class="amidaBox"></div>
+    <p class="editHint" id="amidaHint">上の◯をタップしてスタート！どこにたどり着くかな</p>
+    <div id="amidaResult" class="rouletteResult fCal"></div>
+  </div>
+</div>
+
+<!-- ===== 出目ごとの3D演出 ===== -->
+<div id="resultFx" class="resultFx" hidden>
+  <div class="rfxBg"></div>
+  <div class="rfxParticles" id="rfxParticles"></div>
+  <div class="rfxStage">
+    <div class="rfxIcon" id="rfxIcon"></div>
+    <div class="rfxText fCal" id="rfxText"></div>
+    <div class="rfxSub" id="rfxSub"></div>
+  </div>
+</div>
 
 <!-- ===== 酒ルーレット ===== -->
 <div id="rouletteSheet" class="sheet" hidden>
@@ -219,7 +268,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=21"></script>
-<script src="js/app.js?v=21"></script>
+<script src="js/data.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
 </body>
 </html>
