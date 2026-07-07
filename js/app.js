@@ -200,9 +200,16 @@ function randomStamp() {
     phrase: PHRASES[Math.floor(Math.random() * PHRASES.length)],
     shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
     rot: Math.round(Math.random() * 12 - 6),
-    fx: .25 + Math.random() * .5,
-    fy: .3 + Math.random() * .25
+    fx: .13 + Math.random() * .06,   // デフォルトは左端
+    fy: .32 + Math.random() * .28
   };
+}
+
+// 今日で乾杯何日目か（今日の分を含めて数える）
+function kanpaiDayN() {
+  const dates = new Set(state.records.map(r => r.date));
+  dates.add(todayStr(photoTs ? new Date(photoTs) : new Date()));
+  return dates.size;
 }
 
 function openEditor() {
@@ -218,6 +225,7 @@ function openEditor() {
     selected: 'stamp'
   };
   show('screen-edit');   // getBBox のため先に表示
+  document.getElementById('ovDay').textContent = `乾杯 ${kanpaiDayN()}日目`;
   drawEditCanvas();
   renderOverlays();
 }
@@ -349,6 +357,7 @@ async function savePhoto() {
   renderBase(ctx, FINAL_W, FINAL_H);
   await drawCharaToCanvas(ctx, scale);
   drawStampToCanvas(ctx, scale);
+  await drawDayToCanvas(ctx, scale);
 
   // サムネイル（アプリ内保存用）
   const th = document.createElement('canvas');
@@ -404,6 +413,30 @@ async function drawCharaToCanvas(ctx, scale) {
   ctx.drawImage(img, -w / 2, -w / 2, w, w);
   ctx.restore();
   URL.revokeObjectURL(url);
+}
+
+// 「乾杯 ◯日目」を写真上部に焼き込む（プレビューの .dayBadge と同じ見た目）
+async function drawDayToCanvas(ctx, scale) {
+  const txt = `乾杯 ${kanpaiDayN()}日目`;
+  const fam = `"${fontFamily()}", serif`;
+  const size = 19 * scale;
+  await document.fonts.load(`${Math.round(size)}px ${fam}`, txt);
+  ctx.save();
+  ctx.font = `${size}px ${fam}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const x = FINAL_W / 2, y = FINAL_H * .045;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = size * .22;
+  ctx.strokeStyle = '#262019';
+  ctx.shadowColor = 'rgba(0,0,0,.4)';
+  ctx.shadowOffsetY = size * .1;
+  ctx.shadowBlur = size * .15;
+  ctx.strokeText(txt, x, y);
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#fffcf2';
+  ctx.fillText(txt, x, y);
+  ctx.restore();
 }
 
 // 縦書きで横倒しにする記号類
