@@ -369,6 +369,31 @@ input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--red); }
 }
 .fab:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
 
+/* フレンド画面 */
+.friendCard {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 4px 16px 6px 12px;
+  box-shadow: var(--shadow); padding: 14px; margin-top: 14px;
+}
+.fcHead { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.myCode {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; font-weight: 700;
+  word-break: break-all; background: var(--washi); border: 2px dashed var(--ink);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; line-height: 1.5;
+}
+.btnSmall2 { display: block; width: 100%; margin: 0; padding: 11px 16px; font-size: 15px; }
+.fcHint { font-size: 11.5px; color: var(--grey); margin: 10px 0 0; line-height: 1.7; }
+.addRow { display: flex; gap: 8px; align-items: stretch; }
+.addRow .nameInput { flex: 1; }
+.addRow .btnSmall2 { width: auto; white-space: nowrap; }
+.friendListFull { display: flex; flex-direction: column; gap: 8px; }
+.friendRow {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 10px 14px; font-size: 15px; font-weight: 700;
+}
+.friendRow .fav { font-size: 20px; }
+.friendEmpty { text-align: center; color: var(--grey); font-size: 13px; padding: 20px 0; line-height: 1.8; }
+
 /* 友達を招待シート＆フレンドリスト */
 .inviteBtn {
   display: block; width: 100%; padding: 14px 18px; margin-top: 10px;

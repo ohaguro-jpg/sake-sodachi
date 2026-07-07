@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
 
@@ -34,7 +34,7 @@
     <h1 class="appTitle fCal" id="homeTitle">酒育日記</h1>
     <div class="headBtns">
       <button class="iconBtn" id="btnRouletteOpen" title="酒ルーレット">🎰</button>
-      <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>
+      <button class="iconBtn" id="btnToFriends" title="フレンド">👥</button>
       <button class="iconBtn" id="btnToAlbum" title="アルバム">📚</button>
       <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
     </div>
@@ -47,7 +47,6 @@
       <div id="bbSub" class="bbSub"></div>
     </div>
   </div>
-  <button id="btnInvite" class="btnGhost" style="margin-top:10px">🍻 友達をさそう（リンクを送る）</button>
   <div id="friendChips" class="friendChips"></div>
   <div class="ctrlRow" style="justify-content:center">
     <span class="ctrlLbl">のせる範囲</span>
@@ -142,6 +141,34 @@
   </div>
 </div>
 
+<!-- ===== フレンド ===== -->
+<section id="screen-friends" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnFriendsBack">←</button>
+    <div class="editTitle fCal">フレンド</div>
+    <span style="width:44px"></span>
+  </div>
+
+  <div class="friendCard">
+    <div class="fcHead">あなたのフレンドコード</div>
+    <div id="myCode" class="myCode">…</div>
+    <button id="btnCopyCode" class="btnPrimary btnSmall2">📋 コードをコピー</button>
+    <p class="fcHint">このコードを友達に送ってね。友達が下の欄に貼り付けるだけで、どこにいても追加できるよ（同じWi-Fiじゃなくても大丈夫）</p>
+    <button id="btnInvite" class="btnGhost" style="margin-top:8px">🍻 LINE / インスタで送る</button>
+  </div>
+
+  <div class="friendCard">
+    <div class="fcHead">友達のコードで追加</div>
+    <div class="addRow">
+      <input id="codeInput" class="nameInput" style="margin-bottom:0" type="text" placeholder="SAKE-… を貼り付け" autocomplete="off" autocapitalize="off">
+      <button id="btnAddByCode" class="btnPrimary btnSmall2">追加</button>
+    </div>
+  </div>
+
+  <div class="fcHead" style="margin:18px 4px 8px">フレンド一覧</div>
+  <div id="friendListFull" class="friendListFull"></div>
+</section>
+
 <!-- ===== アルバム ===== -->
 <section id="screen-album" class="screen">
   <div class="editTop">
@@ -173,7 +200,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=18"></script>
-<script src="js/app.js?v=18"></script>
+<script src="js/data.js?v=19"></script>
+<script src="js/app.js?v=19"></script>
 </body>
 </html>

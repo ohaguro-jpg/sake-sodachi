@@ -5,6 +5,8 @@
 const LS_KEY = 'sakeSodachi.v1';
 const FINAL_W = 1080, FINAL_H = 1440;
 const API_BASE = 'https://sake-sodachi-api.vercel.app/api';
+// 招待リンクは常に本番URLに固定（ローカルIPだと同じWi-Fiの人しか開けないため）
+const SITE_URL = 'https://ohaguro-jpg.github.io/sake-sodachi/';
 
 let state = loadState();
 let stream = null;
@@ -148,7 +150,6 @@ function goHome() {
 document.getElementById('btnShoot').onclick = openCamera;
 document.getElementById('buddyBar').onclick = () => { renderBuddy(); show('screen-buddy'); };
 document.getElementById('btnToAlbum').onclick = () => { renderAlbum(); show('screen-album'); };
-document.getElementById('btnToBuddy').onclick = () => { renderBuddy(); show('screen-buddy'); };
 
 // インスタ風：フィードを右にスワイプすると撮影へ
 (() => {
@@ -902,7 +903,7 @@ async function renderFeed() {
     document.getElementById('feedInfo').textContent =
       `右にスワイプ（または📸）で撮影／フィードに載るのは1日2回まで`;
     if (!d.items.length) {
-      listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>「友達をさそう」でリンクを送ってみよう🍻</div>';
+      listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>右下の📸で乾杯を投稿したり、👥から友達を追加してみよう🍻</div>';
       return;
     }
     listEl.innerHTML = '';
@@ -922,13 +923,32 @@ async function renderFeed() {
 }
 document.getElementById('btnFeedReload').onclick = renderFeed;
 
-// 招待リンク（コード入力なし・リンクを踏むだけで相互フレンド）
-// LINE・インスタを最初に出したいので、OSの共有シートではなく専用シートを開く
+// ---------- フレンドコード（コピペで追加。リンクを開く必要なし＝アプリ内ブラウザ・Wi-Fi無関係） ----------
+function encodeCode(uid, name) {
+  const b64 = btoa(unescape(encodeURIComponent(uid + '.' + name)));
+  return 'SAKE-' + b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeCode(code) {
+  try {
+    let s = String(code).trim().replace(/^SAKE-/i, '').replace(/\s+/g, '');
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const raw = decodeURIComponent(escape(atob(s)));
+    const i = raw.indexOf('.');
+    if (i < 0) return null;
+    const uid = raw.slice(0, i), name = raw.slice(i + 1);
+    if (!/^[a-f0-9]{24,64}$/.test(uid) || !name) return null;
+    return { uid, name };
+  } catch (e) { return null; }
+}
+function myCode() { return encodeCode(state.uid, state.userName); }
+
+// 招待リンク（本番URL固定。リンクでもコードでも追加できる）
 function inviteLink() {
-  return location.origin + location.pathname + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
+  return SITE_URL + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
 }
 function inviteMsg() {
-  return `${state.userName}と乾杯フレンドになろう🍻 リンクはSafari（ブラウザ）で開いてね\n${inviteLink()}`;
+  return `${state.userName}と乾杯フレンドになろう🍻\n①リンクをタップ（Safari推奨）\n${inviteLink()}\n\nうまくいかない時は、このコードをアプリの「友達のコードで追加」に貼ってね👇\n${myCode()}`;
 }
 document.getElementById('btnInvite').onclick = () => { document.getElementById('inviteSheet').hidden = false; };
 document.getElementById('btnInviteClose').onclick = () => { document.getElementById('inviteSheet').hidden = true; };
@@ -954,15 +974,78 @@ document.getElementById('btnInviteOther').onclick = async () => {
   catch (e) { prompt('この招待リンクを友達に送ってね', link); }
 };
 
-// フレンドリスト（フィード取得時に更新・オフライン時はキャッシュ表示）
+// フレンドチップ（フィード上部・タップでフレンド画面へ）
 function renderFriendChips(list) {
   const el = document.getElementById('friendChips');
   if (!list || !list.length) {
-    el.innerHTML = '<span class="friendChip none">まだフレンドがいないよ。上のボタンでさそってみよう</span>';
+    el.innerHTML = '<span class="friendChip none">まだフレンドがいないよ。タップして追加👥</span>';
+  } else {
+    el.innerHTML = `<span class="friendChip label">👥 フレンド ${list.length}人</span>` +
+      list.map(f => `<span class="friendChip">${esc(f.name || '？')}</span>`).join('');
+  }
+}
+document.getElementById('friendChips').onclick = openFriends;
+
+// ---------- フレンド画面 ----------
+function openFriends() {
+  document.getElementById('myCode').textContent = myCode();
+  document.getElementById('codeInput').value = '';
+  renderFriendListFull(state.friendsCache || []);
+  show('screen-friends');
+  refreshFriends();          // サーバーから最新を取り直す
+}
+function renderFriendListFull(list) {
+  const el = document.getElementById('friendListFull');
+  if (!list || !list.length) {
+    el.innerHTML = '<div class="friendEmpty">まだフレンドがいないよ🍶<br>上のコードを送るか、友達のコードを貼り付けて追加してね</div>';
     return;
   }
-  el.innerHTML = `<span class="friendChip label">👥 フレンド ${list.length}人</span>` +
-    list.map(f => `<span class="friendChip">${esc(f.name || '？')}</span>`).join('');
+  el.innerHTML = list.map(f => `<div class="friendRow"><span class="fav">🍶</span>${esc(f.name || '？')}</div>`).join('');
+}
+async function refreshFriends() {
+  try {
+    const d = await api(`/feed?uid=${state.uid}`);
+    state.friendsCache = d.friends; saveState();
+    renderFriendListFull(d.friends);
+    renderFriendChips(d.friends);
+  } catch (e) { /* オフラインならキャッシュ表示のまま */ }
+}
+document.getElementById('btnToFriends').onclick = openFriends;
+document.getElementById('btnFriendsBack').onclick = goHome;
+
+document.getElementById('btnCopyCode').onclick = async () => {
+  const b = document.getElementById('btnCopyCode');
+  try {
+    await navigator.clipboard.writeText(myCode());
+    b.textContent = '✓ コピーしたよ！';
+    setTimeout(() => { b.textContent = '📋 コードをコピー'; }, 1800);
+  } catch (e) { prompt('このコードを友達に送ってね', myCode()); }
+};
+
+document.getElementById('btnAddByCode').onclick = async () => {
+  const raw = document.getElementById('codeInput').value;
+  const inv = decodeCode(raw);
+  if (!inv) { alert('コードが正しくないみたい🙏\nSAKE- から始まるコードを、まるごと貼り付けてね'); return; }
+  const b = document.getElementById('btnAddByCode');
+  b.disabled = true; b.textContent = '追加中…';
+  const ok = await addFriendRequest(inv);
+  b.disabled = false; b.textContent = '追加';
+  if (ok) { document.getElementById('codeInput').value = ''; renderFriendListFull(state.friendsCache || []); }
+};
+
+// 共通：友達登録（コード・リンク両方から使う）
+async function addFriendRequest(inv) {
+  if (inv.uid === state.uid) { alert('それは自分のコードだよ😅\n友達に送ってね'); return false; }
+  if ((state.friendsCache || []).some(f => f.uid === inv.uid)) { alert(`${inv.name}とはもう友達だよ🍻`); return false; }
+  try {
+    const d = await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
+    if (d.friends) { state.friendsCache = d.friends; saveState(); }
+    alert(`${inv.name}と友達になった！🍻`);
+    return true;
+  } catch (e) {
+    alert('友達登録に失敗しちゃった…電波のいいところでもう一度ためしてね');
+    return false;
+  }
 }
 
 let pendingInvite = null;
@@ -978,7 +1061,7 @@ function handleInviteHash() {
   if (!m) return;
   const inv = { uid: m[1], name: decodeURIComponent(m[2]) };
   if (inAppBrowser()) {
-    alert('LINEやインスタの中のブラウザだと、友達登録がちゃんと残らないよ🙏\nメニュー（… や ↗）から「Safariで開く」「ブラウザで開く」を選んで、もう一度このリンクを開いてね');
+    alert('LINEやインスタの中のブラウザだと友達登録が残らないよ🙏\n\n【かんたんな方法】メッセージにある「SAKE-…」のコードをコピーして、いつも使ってる酒育日記アプリを開き、👥フレンド →「友達のコードで追加」に貼り付けてね！\n\n（または、メニューの「Safariで開く」からこのリンクを開き直してもOK）');
     return;  // ハッシュは消さない（Safariで開き直すと引き継がれる）
   }
   if (!state.userName) { pendingInvite = inv; return; }  // 初回セットアップ後に処理
@@ -991,19 +1074,8 @@ async function acceptInvite(inv) {
     return;
   }
   if (!confirm(`「${inv.name}」と乾杯フレンドになる？🍻`)) { clearInviteHash(); return; }
-  try {
-    const d = await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
-    if (d.friends) { state.friendsCache = d.friends; saveState(); }
-    clearInviteHash();
-    let msg = `${inv.name}と友達になった！🍻ボタンのフィードでお互いの乾杯が見られるよ`;
-    if (!matchMedia('(display-mode: standalone)').matches) {
-      msg += '\n\n※あとで「ホーム画面に追加」して使う場合は、追加したあとにもう一度この招待リンクを開いてね（記憶が別々になるため）';
-    }
-    alert(msg);
-  } catch (e) {
-    // ハッシュは残す → リロードやリンク再タップでやり直せる
-    alert('友達登録に失敗しちゃった…電波のいいところでリンクをもう一回開いてみて');
-  }
+  const ok = await addFriendRequest(inv);
+  if (ok) clearInviteHash();   // 失敗時はハッシュを残してリトライ可能に
 }
 
 // フィードへ投稿（1日2回まで・写真は縮小してアップ）
