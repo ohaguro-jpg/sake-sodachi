@@ -891,7 +891,7 @@ document.getElementById('btnFeedReload').onclick = renderFeed;
 // 招待リンク（コード入力なし・リンクを踏むだけで相互フレンド）
 document.getElementById('btnInvite').onclick = async () => {
   const link = location.origin + location.pathname + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
-  const text = `${state.userName}と乾杯フレンドになろう🍻`;
+  const text = `${state.userName}と乾杯フレンドになろう🍻 リンクはSafari（ブラウザ）で開いてね`;
   if (navigator.share) {
     try { await navigator.share({ title: '酒育日記', text, url: link }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
@@ -900,21 +900,41 @@ document.getElementById('btnInvite').onclick = async () => {
 };
 
 let pendingInvite = null;
+function clearInviteHash() {
+  if (location.hash.startsWith('#invite=')) history.replaceState(null, '', location.pathname + location.search);
+}
+// LINE・インスタ等のアプリ内ブラウザはSafariと記憶が別なので、そこで登録させない
+function inAppBrowser() {
+  return /Line\/|Instagram|FBAN|FBAV|FB_IAB|Twitter/i.test(navigator.userAgent);
+}
 function handleInviteHash() {
   const m = location.hash.match(/^#invite=([a-f0-9]{24,64})\.(.+)$/);
   if (!m) return;
-  history.replaceState(null, '', location.pathname + location.search);
   const inv = { uid: m[1], name: decodeURIComponent(m[2]) };
+  if (inAppBrowser()) {
+    alert('LINEやインスタの中のブラウザだと、友達登録がちゃんと残らないよ🙏\nメニュー（… や ↗）から「Safariで開く」「ブラウザで開く」を選んで、もう一度このリンクを開いてね');
+    return;  // ハッシュは消さない（Safariで開き直すと引き継がれる）
+  }
   if (!state.userName) { pendingInvite = inv; return; }  // 初回セットアップ後に処理
   acceptInvite(inv);
 }
 async function acceptInvite(inv) {
-  if (inv.uid === state.uid) return;
-  if (!confirm(`「${inv.name}」と乾杯フレンドになる？🍻`)) return;
+  if (inv.uid === state.uid) {
+    clearInviteHash();
+    alert('これは自分の招待リンクだよ😅 このリンクを友達に送ってね');
+    return;
+  }
+  if (!confirm(`「${inv.name}」と乾杯フレンドになる？🍻`)) { clearInviteHash(); return; }
   try {
     await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
-    alert(`${inv.name}と友達になった！🍻ボタンのフィードでお互いの乾杯が見られるよ`);
+    clearInviteHash();
+    let msg = `${inv.name}と友達になった！🍻ボタンのフィードでお互いの乾杯が見られるよ`;
+    if (!matchMedia('(display-mode: standalone)').matches) {
+      msg += '\n\n※あとで「ホーム画面に追加」して使う場合は、追加したあとにもう一度この招待リンクを開いてね（記憶が別々になるため）';
+    }
+    alert(msg);
   } catch (e) {
+    // ハッシュは残す → リロードやリンク再タップでやり直せる
     alert('友達登録に失敗しちゃった…電波のいいところでリンクをもう一回開いてみて');
   }
 }

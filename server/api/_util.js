@@ -1,5 +1,5 @@
 // 共通ヘルパー（_で始まるファイルはエンドポイントにならない）
-import { list } from '@vercel/blob';
+const BLOB_BASE = 'https://lgngh9fbk8mf1w5b.public.blob.vercel-storage.com';
 
 export function cors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,15 +9,14 @@ export function cors(req, res) {
   return false;
 }
 
-// 決め打ちパスのJSON blobを読む（なければnull）
-export async function readJsonBlob(path) {
-  const { blobs } = await list({ prefix: path, limit: 1 });
-  if (!blobs.length) return null;
-  try {
-    const r = await fetch(blobs[0].url + '?t=' + Date.now());
-    if (!r.ok) return null;
-    return await r.json();
-  } catch (e) { return null; }
+// 友達一覧（1人=1ファイル方式。上書きが起きないのでキャッシュ事故・消失がない）
+import { list } from '@vercel/blob';
+export async function listFriends(uid) {
+  const { blobs } = await list({ prefix: `friends/${uid}/`, limit: 200 });
+  const arr = await Promise.all(blobs.map(b =>
+    fetch(b.url).then(r => r.ok ? r.json() : null).catch(() => null)
+  ));
+  return arr.filter(Boolean);
 }
 
 // JSTの今日 YYYY-MM-DD
