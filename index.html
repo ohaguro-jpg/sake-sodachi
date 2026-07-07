@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 
@@ -28,31 +28,37 @@
   <button id="btnStartConfirm" class="btnPrimary" disabled>これではじめる</button>
 </section>
 
-<!-- ===== ホーム ===== -->
-<section id="screen-home" class="screen">
+<!-- ===== ホーム＝乾杯フィード（インスタ風・右スワイプで撮影） ===== -->
+<section id="screen-feed" class="screen">
   <header class="homeHead">
     <h1 class="appTitle fCal" id="homeTitle">酒育日記</h1>
     <div class="headBtns">
       <button class="iconBtn" id="btnRouletteOpen" title="酒ルーレット">🎰</button>
-      <button class="iconBtn" id="btnToFeed" title="乾杯フィード">🍻</button>
       <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>
       <button class="iconBtn" id="btnToAlbum" title="アルバム">📚</button>
+      <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
     </div>
   </header>
-  <div class="buddyStage">
-    <div id="homeChar" class="homeChar"></div>
-    <div class="buddyName"><span id="homeCharName"></span> <span id="homeCharLv" class="lvTag"></span></div>
-    <div class="progressWrap">
-      <div class="progressBar"><div id="homeProgress" class="progressFill"></div></div>
-      <div id="homeProgressLabel" class="progressLabel"></div>
+  <div id="buddyBar" class="buddyBar">
+    <div id="bbChar" class="bbChar"></div>
+    <div class="bbInfo">
+      <div class="bbName"><b id="bbName"></b> <span id="bbLv" class="lvTag"></span></div>
+      <div class="progressBar mini"><div id="bbProgress" class="progressFill"></div></div>
+      <div id="bbSub" class="bbSub"></div>
     </div>
   </div>
-  <div class="homeStats">
-    <div class="stat"><div class="statNum" id="statDays">0</div><div class="statLbl">乾杯した日</div></div>
-    <div class="stat"><div class="statNum" id="statStreak">0</div><div class="statLbl">連続日数</div></div>
+  <button id="btnInvite" class="btnGhost" style="margin-top:10px">🍻 友達をさそう（リンクを送る）</button>
+  <div id="friendChips" class="friendChips"></div>
+  <div class="ctrlRow" style="justify-content:center">
+    <span class="ctrlLbl">のせる範囲</span>
+    <div class="segGroup" id="visSeg">
+      <button data-v="friends">友達だけ</button>
+      <button data-v="all">みんな</button>
+    </div>
   </div>
-  <div id="todayStatus" class="todayStatus"></div>
-  <button id="btnShoot" class="btnPrimary btnShoot">📸 今日のお酒と一緒にパシャ</button>
+  <p class="editHint" style="text-align:center;margin-top:6px" id="feedInfo">右にスワイプ（または📸ボタン）で撮影できるよ</p>
+  <div id="feedList" class="feedList"></div>
+  <button id="btnShoot" class="fab" title="撮影">📸</button>
 </section>
 
 <!-- ===== 撮影 ===== -->
@@ -74,7 +80,7 @@
   <div class="editTop">
     <button class="iconBtn" id="btnEditBack">←</button>
     <div class="editTitle fCal">仕上げ</div>
-    <button id="btnSave" class="btnPrimary btnSmall">保存する</button>
+    <button id="btnSave" class="btnPrimary btnSmall">投稿する🍻</button>
   </div>
   <div id="editStage" class="editStage">
     <canvas id="editCanvas"></canvas>
@@ -130,31 +136,11 @@
     <div id="celebrateTitle" class="celebrateTitle fCal"></div>
     <div id="celebratePts" class="celebratePts"></div>
     <div id="celebrateNote" class="celebrateNote"></div>
-    <button id="btnPostFeed" class="btnGhost">🍻 乾杯フィードに載せる</button>
+    <button id="btnSaveRoll" class="btnGhost">📥 カメラロールに保存</button>
     <button id="btnStory" class="btnGhost">📤 ストーリー用に共有</button>
     <button id="btnCelebrateOk" class="btnPrimary">やったー！</button>
   </div>
 </div>
-
-<!-- ===== 乾杯フィード ===== -->
-<section id="screen-feed" class="screen">
-  <div class="editTop">
-    <button class="iconBtn" id="btnFeedBack">←</button>
-    <div class="editTitle fCal">乾杯フィード</div>
-    <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
-  </div>
-  <button id="btnInvite" class="btnGhost" style="margin-top:0">🍻 友達をさそう（リンクを送る）</button>
-  <div id="friendChips" class="friendChips"></div>
-  <div class="ctrlRow" style="justify-content:center">
-    <span class="ctrlLbl">のせる範囲</span>
-    <div class="segGroup" id="visSeg">
-      <button data-v="friends">友達だけ</button>
-      <button data-v="all">みんな</button>
-    </div>
-  </div>
-  <p class="editHint" style="text-align:center;margin-top:6px" id="feedInfo">フィードに載せられるのは1日2回まで。写真は選んだ範囲の人にだけ見えるよ</p>
-  <div id="feedList" class="feedList"></div>
-</section>
 
 <!-- ===== アルバム ===== -->
 <section id="screen-album" class="screen">
@@ -187,7 +173,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=17"></script>
-<script src="js/app.js?v=17"></script>
+<script src="js/data.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
 </body>
 </html>

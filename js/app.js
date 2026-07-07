@@ -112,46 +112,59 @@ document.getElementById('btnStartConfirm').onclick = () => {
   state.buddyPoints[startPick] = state.buddyPoints[startPick] || 0;
   saveState();
   updateTitle();
-  renderHome();
-  show('screen-home');
+  goHome();
   if (pendingInvite) { const inv = pendingInvite; pendingInvite = null; acceptInvite(inv); }
 };
 
-// ---------- ホーム ----------
-function renderHome() {
+// ---------- ホーム＝乾杯フィード（相棒ミニバー付き） ----------
+function renderBuddyBar() {
   const id = state.buddy;
   const pts = state.buddyPoints[id] || 0;
   const lv = levelOf(pts);
   const c = CHARACTERS[id];
-  document.getElementById('homeChar').innerHTML = charSvgInline(id, lv);
-  document.getElementById('homeCharName').textContent = c.levels[lv - 1].name;
-  document.getElementById('homeCharLv').textContent = `Lv.${lv} ${c.levels[lv - 1].sub}`;
-  const bar = document.getElementById('homeProgress');
-  const lbl = document.getElementById('homeProgressLabel');
-  if (lv >= 5) {
-    bar.style.width = '100%';
-    lbl.textContent = '育ちきった！（相棒画面で次の子を迎えられるよ）';
-  } else {
+  document.getElementById('bbChar').innerHTML = charSvgInline(id, lv);
+  document.getElementById('bbName').textContent = c.levels[lv - 1].name;
+  document.getElementById('bbLv').textContent = `Lv.${lv}`;
+  const bar = document.getElementById('bbProgress');
+  if (lv >= 5) bar.style.width = '100%';
+  else {
     const lo = LEVEL_THRESHOLDS[lv - 1], hi = LEVEL_THRESHOLDS[lv];
-    const pct = Math.round((pts - lo) / (hi - lo) * 100);
-    bar.style.width = `${pct}%`;
-    lbl.textContent = pct >= 70 ? 'つぎの進化まで、もうすこし！' : '毎日パシャっとすると育つよ';
+    bar.style.width = `${Math.round((pts - lo) / (hi - lo) * 100)}%`;
   }
-  document.getElementById('statDays').textContent = new Set(state.records.map(r => r.date)).size;
-  document.getElementById('statStreak').textContent = streakDays();
-  const st = document.getElementById('todayStatus');
-  const btn = document.getElementById('btnShoot');
-  if (hasRecordToday()) {
-    st.innerHTML = '<span class="done">今日はもう乾杯済み 🍻</span>（育つのは1日1回、写真は何枚でもOK）';
-    btn.textContent = '📸 おかわりでパシャ';
-  } else {
-    st.textContent = '今日の一枚、まだだよ';
-    btn.textContent = '📸 今日のお酒と一緒にパシャ';
-  }
+  const streak = streakDays();
+  const today = hasRecordToday() ? '今日はもう乾杯済み🍻' : '今日の一枚、まだだよ📸';
+  document.getElementById('bbSub').textContent =
+    (streak > 1 ? `連続${streak}日🔥　` : '') + today;
+}
+// ホーム（＝フィード）へ戻る共通処理
+function goHome() {
+  updateTitle();
+  renderBuddyBar();
+  renderVisSeg();
+  renderFriendChips(state.friendsCache || []);
+  renderFeed();
+  show('screen-feed');
 }
 document.getElementById('btnShoot').onclick = openCamera;
+document.getElementById('buddyBar').onclick = () => { renderBuddy(); show('screen-buddy'); };
 document.getElementById('btnToAlbum').onclick = () => { renderAlbum(); show('screen-album'); };
 document.getElementById('btnToBuddy').onclick = () => { renderBuddy(); show('screen-buddy'); };
+
+// インスタ風：フィードを右にスワイプすると撮影へ
+(() => {
+  const el = document.getElementById('screen-feed');
+  let sx = null, sy = null;
+  el.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    sx = null;
+    if (dx > 70 && Math.abs(dy) < 60) openCamera();
+  });
+})();
 
 // ---------- 撮影 ----------
 async function openCamera() {
@@ -169,7 +182,7 @@ async function openCamera() {
 function stopCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
-document.getElementById('btnCamClose').onclick = () => { renderHome(); show('screen-home'); };
+document.getElementById('btnCamClose').onclick = goHome;
 
 // カバークロップして1080x1440の原本canvasを作る
 function coverCrop(source, sw, sh, mirror) {
@@ -344,20 +357,22 @@ setupDrag('ovStamp', 'stamp');
 setupDrag('ovChara', 'chara');
 
 // ---------- 保存（合成→カメラロール→記録） ----------
+// 投稿ボタン：合成→記録→フィードへ投稿（カメラロール保存は完了画面で任意）
 document.getElementById('btnSave').onclick = async () => {
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
-  btn.textContent = '作成中…';
+  btn.textContent = '投稿中…';
   try {
-    await savePhoto();
+    await postPhoto();
   } catch (e) {
-    alert('保存に失敗しちゃった…もう一度試してね\n' + e.message);
+    alert('うまくいかなかった…もう一度試してね\n' + e.message);
   }
   btn.disabled = false;
-  btn.textContent = '保存する';
+  btn.textContent = '投稿する🍻';
 };
 
-async function savePhoto() {
+// 写真を合成して記録（ポイント付与）→ フィード投稿 → 完了演出
+async function postPhoto() {
   const fam = fontFamily();
   const stageW = stageEl().getBoundingClientRect().width;
   const scale = FINAL_W / stageW;
@@ -370,7 +385,7 @@ async function savePhoto() {
   await drawCharaToCanvas(ctx, scale);
   drawStampToCanvas(ctx, scale);
   await drawDayToCanvas(ctx, scale);
-  lastShot = cv;   // ストーリー共有用に保持
+  lastShot = cv;   // ストーリー共有・カメラロール保存用に保持
 
   // サムネイル（アプリ内保存用）
   const th = document.createElement('canvas');
@@ -392,26 +407,45 @@ async function savePhoto() {
   });
   saveState();
 
-  // カメラロールへ（share優先、だめならダウンロード）
-  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .92));
-  const d = new Date(photoTs);
+  // フィードへ投稿（失敗しても記録・ポイントはそのまま）
+  let postMsg;
+  try {
+    await postToFeed();
+    postMsg = state.share.vis === 'all' ? 'フィードに載せたよ（みんな公開）🍻' : 'フィードに載せたよ（友達だけ）🍻';
+  } catch (e) {
+    postMsg = e.code === 429
+      ? '今日はもう2回載せたから、フィードには載ってないよ（写真は残ってる）'
+      : '電波が弱くてフィードには載せられなかった…（写真は残ってる）';
+  }
+
+  showCelebrate(pts, prevLv, newLv, first, bonusHit ? rl.label : null, postMsg);
+}
+
+// カメラロールへ保存（share優先、だめならダウンロード）
+async function saveToCameraRoll() {
+  if (!lastShot) return;
+  const blob = await new Promise(r => lastShot.toBlob(r, 'image/jpeg', .92));
+  const d = new Date(photoTs || Date.now());
   const p = n => String(n).padStart(2, '0');
   const fname = `sake_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.jpg`;
   const file = new File([blob], fname, { type: 'image/jpeg' });
-  let shared = false;
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); shared = true; } catch (e) { /* キャンセル時はDLへ */ }
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
   }
-  if (!shared) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  }
-
-  showCelebrate(pts, prevLv, newLv, first, bonusHit ? rl.label : null);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
+document.getElementById('btnSaveRoll').onclick = async () => {
+  const b = document.getElementById('btnSaveRoll');
+  b.disabled = true; b.textContent = '保存中…';
+  try { await saveToCameraRoll(); b.textContent = '📥 保存したよ'; }
+  catch (e) { b.textContent = '📥 カメラロールに保存'; alert('保存に失敗しちゃった…もう一回試してね'); }
+  b.disabled = false;
+};
 
 // 相棒スタンプを合成
 async function drawCharaToCanvas(ctx, scale) {
@@ -571,7 +605,7 @@ function spawnRings(n) {
     box.appendChild(r);
   }
 }
-function showCelebrate(pts, prevLv, newLv, first, bonusLabel) {
+function showCelebrate(pts, prevLv, newLv, first, bonusLabel, postMsg) {
   const evolved = newLv > prevLv;
   const c = CHARACTERS[state.buddy];
   const cel = document.getElementById('celebrate');
@@ -591,10 +625,10 @@ function showCelebrate(pts, prevLv, newLv, first, bonusLabel) {
     : first ? (bonusLabel ? `「${bonusLabel}」ボーナスでグングン育った！` : '相棒がそだった！')
     : '（育つのは1日1回だよ）';
   document.getElementById('celebrateNote').textContent =
-    evolved ? c.levels[newLv - 1].sub : '写真はカメラロールに保存したよ。また明日、乾杯🍻';
-  const pb = document.getElementById('btnPostFeed');
-  pb.disabled = false;
-  pb.textContent = '🍻 乾杯フィードに載せる';
+    (evolved ? c.levels[newLv - 1].sub + '　' : '') + (postMsg || 'また明日、乾杯🍻');
+  const sb = document.getElementById('btnSaveRoll');
+  sb.disabled = false;
+  sb.textContent = '📥 カメラロールに保存';
   cel.hidden = false;
 }
 // ---------- ストーリー用共有（1080x1920 縦長に自動レイアウト） ----------
@@ -670,8 +704,7 @@ document.getElementById('btnCelebrateOk').onclick = () => {
   document.getElementById('celebrateRays').className = 'celebrateRays';
   document.getElementById('celebrateConfetti').innerHTML = '';
   document.getElementById('celebrateRings').innerHTML = '';
-  renderHome();
-  show('screen-home');
+  goHome();
 };
 
 // ---------- アルバム ----------
@@ -700,7 +733,7 @@ function openViewer(r) {
   document.getElementById('albumViewer').hidden = false;
 }
 document.getElementById('btnViewerClose').onclick = () => { document.getElementById('albumViewer').hidden = true; };
-document.getElementById('btnAlbumBack').onclick = () => { renderHome(); show('screen-home'); };
+document.getElementById('btnAlbumBack').onclick = goHome;
 
 // ---------- 相棒ステータス／切替 ----------
 function renderBuddy() {
@@ -735,7 +768,7 @@ function renderBuddy() {
     grid.appendChild(card);
   });
 }
-document.getElementById('btnBuddyBack').onclick = () => { renderHome(); show('screen-home'); };
+document.getElementById('btnBuddyBack').onclick = goHome;
 
 // ---------- 酒ルーレット ----------
 const ROULETTE_ITEMS = [
@@ -867,7 +900,7 @@ async function renderFeed() {
     saveState();
     renderFriendChips(d.friends);
     document.getElementById('feedInfo').textContent =
-      `載せられるのは1日2回まで・選んだ範囲の人にだけ見えるよ`;
+      `右にスワイプ（または📸）で撮影／フィードに載るのは1日2回まで`;
     if (!d.items.length) {
       listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>「友達をさそう」でリンクを送ってみよう🍻</div>';
       return;
@@ -887,13 +920,6 @@ async function renderFeed() {
     listEl.innerHTML = '<div class="albumEmpty">よみこめなかった…😢<br>電波を確認して🔄で更新してみて</div>';
   }
 }
-document.getElementById('btnToFeed').onclick = () => {
-  renderVisSeg();
-  renderFriendChips(state.friendsCache || []);
-  renderFeed();
-  show('screen-feed');
-};
-document.getElementById('btnFeedBack').onclick = () => { renderHome(); show('screen-home'); };
 document.getElementById('btnFeedReload').onclick = renderFeed;
 
 // 招待リンク（コード入力なし・リンクを踏むだけで相互フレンド）
@@ -994,18 +1020,6 @@ async function postToFeed() {
     phrase: edit.phrase, vis: state.share.vis, img
   });
 }
-document.getElementById('btnPostFeed').onclick = async () => {
-  const b = document.getElementById('btnPostFeed');
-  b.disabled = true; b.textContent = '載せてる…';
-  try {
-    await postToFeed();
-    b.textContent = state.share.vis === 'all' ? '🍻 載せたよ（みんな公開）' : '🍻 載せたよ（友達だけ）';
-  } catch (e) {
-    b.disabled = false;
-    if (e.code === 429) { b.textContent = '🍻 乾杯フィードに載せる'; alert('今日はもう2回載せたよ！また明日🍻'); }
-    else { b.textContent = '🍻 乾杯フィードに載せる'; alert('載せられなかった…電波を確認してもう一回'); }
-  }
-};
 
 // ---------- 開発用：デモ写真で編集画面を試す ----------
 window.__demo = function () {
@@ -1027,6 +1041,6 @@ window.__demo = function () {
 // ---------- 起動 ----------
 document.querySelector('#svgDefs defs').innerHTML = SVG_DEFS;
 updateTitle();
-if (state.buddy && state.userName) { renderHome(); show('screen-home'); }
+if (state.buddy && state.userName) { goHome(); }
 else { renderStart(); show('screen-start'); }
 handleInviteHash();
