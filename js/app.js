@@ -10,6 +10,7 @@ let stream = null;
 let srcCanvas = null;      // 撮影原本（1080x1440にカバークロップ済み）
 let photoTs = null;        // 撮影時刻（写真に焼き込む）
 let edit = null;           // 編集中の状態
+let lastShot = null;       // 直前に合成した完成写真（ストーリー共有用）
 
 // ---------- state ----------
 function loadState() {
@@ -358,6 +359,7 @@ async function savePhoto() {
   await drawCharaToCanvas(ctx, scale);
   drawStampToCanvas(ctx, scale);
   await drawDayToCanvas(ctx, scale);
+  lastShot = cv;   // ストーリー共有用に保持
 
   // サムネイル（アプリ内保存用）
   const th = document.createElement('canvas');
@@ -365,9 +367,11 @@ async function savePhoto() {
   th.getContext('2d').drawImage(cv, 0, 0, 270, 360);
   const thumb = th.toDataURL('image/jpeg', .65);
 
-  // 記録＆ポイント（1日1回）
+  // 記録＆ポイント（1日1回・ルーレットの出目ボーナス付き）
   const first = !hasRecordToday();
-  const pts = first ? BASE_POINTS : 0;
+  const rl = state.roulette;
+  const bonusHit = first && rl && rl.date === todayStr(new Date(photoTs));
+  const pts = first ? BASE_POINTS + (bonusHit ? rl.bonus : 0) : 0;
   const prevLv = levelOf(state.buddyPoints[state.buddy] || 0);
   if (first) state.buddyPoints[state.buddy] = (state.buddyPoints[state.buddy] || 0) + pts;
   const newLv = levelOf(state.buddyPoints[state.buddy] || 0);
@@ -395,7 +399,7 @@ async function savePhoto() {
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
 
-  showCelebrate(pts, prevLv, newLv, first);
+  showCelebrate(pts, prevLv, newLv, first, bonusHit ? rl.label : null);
 }
 
 // 相棒スタンプを合成
@@ -556,7 +560,7 @@ function spawnRings(n) {
     box.appendChild(r);
   }
 }
-function showCelebrate(pts, prevLv, newLv, first) {
+function showCelebrate(pts, prevLv, newLv, first, bonusLabel) {
   const evolved = newLv > prevLv;
   const c = CHARACTERS[state.buddy];
   const cel = document.getElementById('celebrate');
@@ -568,15 +572,82 @@ function showCelebrate(pts, prevLv, newLv, first) {
   document.getElementById('celebrateFlash').className =
     'celebrateFlash' + (evolved ? ' go' : '');
   spawnRings(evolved ? 3 : 0);
-  spawnConfetti(evolved ? 40 : (first ? 18 : 0));
+  spawnConfetti(evolved ? 40 : (first ? (bonusLabel ? 30 : 18) : 0));
   document.getElementById('celebrateTitle').textContent =
     evolved ? `${c.levels[newLv - 1].name} に進化！！` : '今日も乾杯！';
   document.getElementById('celebratePts').textContent =
-    evolved ? 'ドドーン！！' : (first ? '相棒がそだった！' : '（育つのは1日1回だよ）');
+    evolved ? 'ドドーン！！'
+    : first ? (bonusLabel ? `「${bonusLabel}」ボーナスでグングン育った！` : '相棒がそだった！')
+    : '（育つのは1日1回だよ）';
   document.getElementById('celebrateNote').textContent =
     evolved ? c.levels[newLv - 1].sub : '写真はカメラロールに保存したよ。また明日、乾杯🍻';
   cel.hidden = false;
 }
+// ---------- ストーリー用共有（1080x1920 縦長に自動レイアウト） ----------
+function rrPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+}
+async function buildStoryCanvas() {
+  const W = 1080, H = 1920;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  // 夜の墨色グラデ＋金の粒
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#2c2438'); g.addColorStop(.6, '#1d1826'); g.addColorStop(1, '#141019');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 50; i++) {
+    ctx.fillStyle = `rgba(232,163,61,${(Math.random() * .4 + .1).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 4 + 1.5, 0, 7);
+    ctx.fill();
+  }
+  // 完成写真を白フチ＋角丸で中央に
+  const pw = 920, ph = pw * 4 / 3;
+  const px = (W - pw) / 2, py = (H - ph) / 2 + 30;
+  ctx.save();
+  rrPath(ctx, px - 12, py - 12, pw + 24, ph + 24, 40);
+  ctx.fillStyle = '#fffcf2'; ctx.fill();
+  ctx.restore();
+  ctx.save();
+  rrPath(ctx, px, py, pw, ph, 30); ctx.clip();
+  ctx.drawImage(lastShot, px, py, pw, ph);
+  ctx.restore();
+  // 上下の文字（書道）
+  const fam = `"${fontFamily()}", serif`;
+  await document.fonts.load('66px ' + fam, appTitle());
+  ctx.textAlign = 'center';
+  ctx.font = '66px ' + fam;
+  ctx.fillStyle = '#e8a33d';
+  ctx.fillText(appTitle(), W / 2, py - 60);
+  ctx.font = '42px ' + fam;
+  ctx.fillStyle = 'rgba(255,252,242,.9)';
+  ctx.fillText('また明日、乾杯 🍻', W / 2, py + ph + 96);
+  return cv;
+}
+async function shareStory() {
+  if (!lastShot) return;
+  const cv = await buildStoryCanvas();
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .92));
+  const file = new File([blob], 'sake_story.jpg', { type: 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sake_story.jpg';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+document.getElementById('btnStory').onclick = async () => {
+  const b = document.getElementById('btnStory');
+  b.disabled = true; b.textContent = '作成中…';
+  try { await shareStory(); } catch (e) { alert('共有に失敗しちゃった… ' + e.message); }
+  b.disabled = false; b.textContent = '📤 ストーリー用に共有';
+};
+
 document.getElementById('btnCelebrateOk').onclick = () => {
   document.getElementById('celebrate').hidden = true;
   // 次回のアニメが再発火するようにリセット
@@ -654,12 +725,12 @@ document.getElementById('btnBuddyBack').onclick = () => { renderHome(); show('sc
 
 // ---------- 酒ルーレット ----------
 const ROULETTE_ITEMS = [
-  { label: 'ビール',   color: '#e8a33d' },
-  { label: 'テキーラ', color: '#7d9b4e' },
-  { label: 'ブーブ',   color: '#b3362f' },
-  { label: 'ドンペリ', color: '#3b5b8c' },
-  { label: 'スナック', color: '#c9403a' },
-  { label: '赤ワイン', color: '#6e211b' }
+  { label: 'ビール',   color: '#e8a33d', bonus: 2,  stars: '★' },
+  { label: 'テキーラ', color: '#7d9b4e', bonus: 4,  stars: '★★' },
+  { label: 'ブーブ',   color: '#b3362f', bonus: 8,  stars: '★★★' },
+  { label: 'ドンペリ', color: '#3b5b8c', bonus: 15, stars: '★★★★★' },
+  { label: 'スナック', color: '#c9403a', bonus: 5,  stars: '★★' },
+  { label: '赤ワイン', color: '#6e211b', bonus: 3,  stars: '★' }
 ];
 let wheelAngle = 0, spinning = false, wheelBuilt = false;
 
@@ -700,8 +771,40 @@ function spinRoulette() {
   wheel.style.transform = `rotate(${target}deg)`;
   setTimeout(() => {
     spinning = false;
-    res.textContent = `今夜は「${ROULETTE_ITEMS[win].label}」！🍻`;
+    const it = ROULETTE_ITEMS[win];
+    // 今日のボーナスとして記憶（その日のうちに撮ると相棒がグッと育つ）
+    state.roulette = { date: todayStr(), label: it.label, bonus: it.bonus };
+    saveState();
+    res.innerHTML = `今夜は「${it.label}」！🍻<div class="rouletteBonus">育ちボーナス ${it.stars}</div>`;
+    if (it.bonus >= 8) fireJackpot(it);   // ブーブ・ドンペリは大当たり演出
   }, 3300);
+}
+
+// パチンコ風大当たり演出（ストロボ＋高速回転光＋キラキラ降下＋シェイク。ドンペリは虹色）
+function fireJackpot(it) {
+  const jp = document.getElementById('jackpot');
+  jp.classList.toggle('rainbow', it.bonus >= 15);
+  document.getElementById('jpText').textContent =
+    it.bonus >= 15 ? `激アツ！！\n${it.label}大当たり！` : `大当たり！！\n${it.label}`;
+  const stars = document.getElementById('jpStars');
+  stars.innerHTML = '';
+  const glyphs = ['✦', '✧', '★', '🍾', '✨', '🥂'];
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('i');
+    s.textContent = glyphs[i % glyphs.length];
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.fontSize = (16 + Math.random() * 28) + 'px';
+    s.style.animationDuration = (1.2 + Math.random() * 1.8) + 's';
+    s.style.animationDelay = (Math.random() * .9) + 's';
+    stars.appendChild(s);
+  }
+  jp.hidden = false;
+  const inner = document.querySelector('#rouletteSheet .sheetInner');
+  inner.classList.add('shake');
+  setTimeout(() => {
+    jp.hidden = true;
+    inner.classList.remove('shake');
+  }, 3200);
 }
 
 document.getElementById('btnRouletteOpen').onclick = () => {

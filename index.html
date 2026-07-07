@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 
@@ -95,8 +95,16 @@
       <div id="wheel" class="wheel"></div>
     </div>
     <div id="rouletteResult" class="rouletteResult fCal"></div>
-    <p class="editHint">ルーレットをタップして回す！　もう一回タップで回し直し</p>
+    <p class="editHint">ルーレットをタップして回す！　出たお酒と一緒に今日の一枚を撮ると、相棒がいつもよりグッと育つよ（ブーブ・ドンペリは大当たり🎰）</p>
   </div>
+</div>
+
+<!-- ===== 大当たりジャックポット演出 ===== -->
+<div id="jackpot" class="jackpot" hidden>
+  <div class="jpStrobe"></div>
+  <div class="jpRays"></div>
+  <div id="jpStars" class="jpStars"></div>
+  <div id="jpText" class="jpText fCal"></div>
 </div>
 
 <!-- ===== 保存完了・進化演出 ===== -->
@@ -110,6 +118,7 @@
     <div id="celebrateTitle" class="celebrateTitle fCal"></div>
     <div id="celebratePts" class="celebratePts"></div>
     <div id="celebrateNote" class="celebrateNote"></div>
+    <button id="btnStory" class="btnGhost">📤 ストーリー用に共有</button>
     <button id="btnCelebrateOk" class="btnPrimary">やったー！</button>
   </div>
 </div>
@@ -145,7 +154,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=13"></script>
-<script src="js/app.js?v=13"></script>
+<script src="js/data.js?v=14"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
