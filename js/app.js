@@ -188,7 +188,7 @@ function openEditor() {
     font: state.settings.font,
     shape: state.settings.shape,
     beauty: 0.35,
-    stamp: { fx: .34, fy: .68, size: 26, rot: -4 },
+    stamp: { fx: .5, fy: .66, size: 24, rot: -4 },
     chara: { fx: .8, fy: .8, size: 26, rot: 0 },
     selected: 'stamp'
   };
@@ -284,7 +284,7 @@ function fontFamily() { return FONTS.find(f => f.id === edit.font).family; }
 function renderOverlays() {
   const ov = document.getElementById('ovStamp');
   const s = edit.stamp;
-  const fam = `"${fontFamily()}", serif`;
+  const fam = `'${fontFamily()}', serif`;
   if (edit.shape === 'A') {
     ov.innerHTML = `<span class="stampA" style="font-family:${fam}">${edit.phrase}</span>`;
   } else if (edit.shape === 'B') {

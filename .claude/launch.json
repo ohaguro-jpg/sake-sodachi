@@ -4,8 +4,8 @@
     {
       "name": "sake-sodachi",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4477", "-d", "/Users/yuji/sake-sodachi"],
-      "port": 4477
+      "runtimeArgs": ["-m", "http.server", "4433", "-d", "/Users/yuji/sake-sodachi"],
+      "port": 4433
     }
   ]
 }
