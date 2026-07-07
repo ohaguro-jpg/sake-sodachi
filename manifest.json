@@ -1,6 +1,6 @@
 {
-  "name": "酒育て日記",
-  "short_name": "酒育て",
+  "name": "酒育日記",
+  "short_name": "酒育",
   "description": "今日のお酒＋相棒キャラ＋自分の3ショットを1日1枚。飲むほど相棒が育つ記念写真アプリ",
   "start_url": ".",
   "display": "standalone",

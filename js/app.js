@@ -18,9 +18,10 @@ function loadState() {
     if (s && s.buddyPoints) return s;
   } catch (e) {}
   return {
+    userName: '',
     buddy: null,
     buddyPoints: {},           // charId -> 累計ポイント
-    records: [],               // {date, ts, rank, phrase, pts, charId, thumb}
+    records: [],               // {date, ts, phrase, pts, charId, thumb}
     settings: { font: 'boku', shape: 'A' }
   };
 }
@@ -58,30 +59,48 @@ function show(id) {
   if (id !== 'screen-camera') stopCamera();
 }
 
-// ---------- 初回：相棒えらび ----------
+// ---------- タイトル（◯◯酒育日記） ----------
+function appTitle() { return state.userName ? `${state.userName}酒育日記` : '酒育日記'; }
+function updateTitle() {
+  document.getElementById('homeTitle').textContent = appTitle();
+  document.title = appTitle();
+}
+
+// ---------- 初回：名前＆相棒えらび ----------
 let startPick = null;
+function checkStartReady() {
+  const named = document.getElementById('nameInput').value.trim().length > 0;
+  document.getElementById('btnStartConfirm').disabled = !(named && startPick);
+}
 function renderStart() {
+  document.getElementById('nameInput').value = state.userName || '';
+  startPick = state.buddy || null;   // 既存ユーザーは相棒を引き継ぎ
   const grid = document.getElementById('startCards');
   grid.innerHTML = '';
   CHAR_ORDER.forEach(id => {
     const c = CHARACTERS[id];
     const card = document.createElement('div');
-    card.className = 'charCard';
+    card.className = 'charCard' + (startPick === id ? ' selected' : '');
     card.innerHTML = `${charSvgInline(id, 1)}<div class="nm">${c.name}</div><div class="mt">${c.motif}／${c.levels[0].name}</div>`;
     card.onclick = () => {
       startPick = id;
       grid.querySelectorAll('.charCard').forEach(x => x.classList.remove('selected'));
       card.classList.add('selected');
-      document.getElementById('btnStartConfirm').disabled = false;
+      checkStartReady();
     };
     grid.appendChild(card);
   });
+  checkStartReady();
 }
+document.getElementById('nameInput').addEventListener('input', checkStartReady);
 document.getElementById('btnStartConfirm').onclick = () => {
-  if (!startPick) return;
+  const name = document.getElementById('nameInput').value.trim();
+  if (!startPick || !name) return;
+  state.userName = name;
   state.buddy = startPick;
   state.buddyPoints[startPick] = state.buddyPoints[startPick] || 0;
   saveState();
+  updateTitle();
   renderHome();
   show('screen-home');
 };
@@ -632,5 +651,6 @@ window.__demo = function () {
 
 // ---------- 起動 ----------
 document.querySelector('#svgDefs defs').innerHTML = SVG_DEFS;
-if (state.buddy) { renderHome(); show('screen-home'); }
+updateTitle();
+if (state.buddy && state.userName) { renderHome(); show('screen-home'); }
 else { renderStart(); show('screen-start'); }

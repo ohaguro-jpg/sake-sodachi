@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#f8f2e4">
-<title>酒育て日記</title>
+<title>酒育日記</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,16 +20,18 @@
 
 <!-- ===== 初回：相棒えらび ===== -->
 <section id="screen-start" class="screen">
-  <h1 class="appTitle fCal">酒育て日記</h1>
-  <p class="sub">いっしょに晩酌する相棒を1匹えらんでね。<br>育ちきるまでずっと一緒だよ。</p>
+  <h1 class="appTitle fCal">酒育日記</h1>
+  <p class="sub">まずは名前をおしえてね。「◯◯酒育日記」になるよ。</p>
+  <input id="nameInput" class="nameInput" type="text" maxlength="10" placeholder="なまえ（例：ゆうじ）" autocomplete="off">
+  <p class="sub">つぎに、いっしょに晩酌する相棒を1匹えらんでね。<br>育ちきるまでずっと一緒だよ。</p>
   <div id="startCards" class="charGrid"></div>
-  <button id="btnStartConfirm" class="btnPrimary" disabled>この子にする</button>
+  <button id="btnStartConfirm" class="btnPrimary" disabled>これではじめる</button>
 </section>
 
 <!-- ===== ホーム ===== -->
 <section id="screen-home" class="screen">
   <header class="homeHead">
-    <h1 class="appTitle fCal">酒育て日記</h1>
+    <h1 class="appTitle fCal" id="homeTitle">酒育日記</h1>
     <div class="headBtns">
       <button class="iconBtn" id="btnRouletteOpen" title="酒ルーレット">🎰</button>
       <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>

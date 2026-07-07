@@ -51,6 +51,15 @@ svg .o2 { stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; stroke-
 }
 .iconBtn.light { background: rgba(255, 252, 242, .16); border-color: rgba(255, 252, 242, .5); color: #fff; }
 
+/* 名前入力 */
+.nameInput {
+  width: 100%; padding: 12px 14px; font-size: 17px; font-family: inherit;
+  background: var(--paper); color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 10px; box-shadow: var(--shadow);
+  margin-bottom: 6px;
+}
+.nameInput:focus { outline: 3px solid var(--gold); outline-offset: -1px; }
+
 /* キャラカード（相棒えらび・相棒一覧） */
 .charGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .charCard {
@@ -71,8 +80,9 @@ svg .o2 { stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; stroke-
 .charCard .cardBar i { display: block; height: 100%; background: var(--gold); }
 
 /* ホーム */
-.homeHead { display: flex; justify-content: space-between; align-items: center; }
-.headBtns { display: flex; gap: 8px; }
+.homeHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.homeHead .appTitle { font-size: 21px; letter-spacing: 1px; flex: 1; min-width: 0; }
+.headBtns { display: flex; gap: 8px; flex-shrink: 0; }
 .buddyStage {
   background: var(--paper); border: 2px solid var(--ink); border-radius: 4px 22px 6px 18px;
   box-shadow: var(--shadow); text-align: center; padding: 18px 14px 16px; margin-top: 12px;
