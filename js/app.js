@@ -118,54 +118,94 @@ document.getElementById('btnStartConfirm').onclick = () => {
   if (pendingInvite) { const inv = pendingInvite; pendingInvite = null; acceptInvite(inv); }
 };
 
-// ---------- ホーム＝乾杯フィード（相棒ミニバー付き） ----------
-function renderBuddyBar() {
+// ---------- ホーム＝育成（相棒メイン）大表示 ----------
+function renderHomeBuddy() {
   const id = state.buddy;
   const pts = state.buddyPoints[id] || 0;
   const lv = levelOf(pts);
   const c = CHARACTERS[id];
-  document.getElementById('bbChar').innerHTML = charSvgInline(id, lv);
-  document.getElementById('bbName').textContent = c.levels[lv - 1].name;
-  document.getElementById('bbLv').textContent = `Lv.${lv}`;
-  const bar = document.getElementById('bbProgress');
-  if (lv >= 5) bar.style.width = '100%';
-  else {
+  document.getElementById('homeChar').innerHTML = charSvgInline(id, lv);
+  document.getElementById('homeCharName').textContent = c.levels[lv - 1].name;
+  document.getElementById('homeCharLv').textContent = `Lv.${lv} ${c.levels[lv - 1].sub}`;
+  const bar = document.getElementById('homeProgress');
+  const lbl = document.getElementById('homeProgressLabel');
+  if (lv >= 5) {
+    bar.style.width = '100%';
+    lbl.textContent = '育ちきった！「相棒をかえる」から次の子を迎えられるよ';
+  } else {
     const lo = LEVEL_THRESHOLDS[lv - 1], hi = LEVEL_THRESHOLDS[lv];
     bar.style.width = `${Math.round((pts - lo) / (hi - lo) * 100)}%`;
+    lbl.textContent = '毎日パシャっとすると育つよ';
   }
-  const streak = streakDays();
-  const today = hasRecordToday() ? '今日はもう乾杯済み🍻' : '今日の一枚、まだだよ📸';
-  document.getElementById('bbSub').textContent =
-    (streak > 1 ? `連続${streak}日🔥　` : '') + today;
+  document.getElementById('statDays').textContent = new Set(state.records.map(r => r.date)).size;
+  document.getElementById('statStreak').textContent = streakDays();
+  document.getElementById('homeStatus').innerHTML = hasRecordToday()
+    ? '<span class="done">今日はもう乾杯済み🍻</span>'
+    : '今日の一枚、まだだよ📸　右下の📸でパシャ！';
 }
-// ホーム（＝フィード）へ戻る共通処理
+
+// ---------- 育成⇄フィード 横スライダー ----------
+const sliderVp = document.getElementById('sliderViewport');
+const sliderTrack = document.getElementById('sliderTrack');
+let panelW = 0, homeX = 0, feedX = 0, curX = 0, atFeed = false;
+function setSliderX(x, anim = true) {
+  curX = x;
+  sliderTrack.style.transition = anim ? 'transform .32s cubic-bezier(.2,.7,.2,1)' : 'none';
+  sliderTrack.style.transform = `translateX(${x}px)`;
+}
+function layoutSlider() {
+  const w = sliderVp.clientWidth;
+  if (!w) return;            // まだ幅が確定していない → ResizeObserverが確定時に呼び直す
+  panelW = w;
+  feedX = 0;                 // フィード全表示
+  homeX = -panelW * 0.72;    // 育成メイン（左28%に友達フィードがチラ見え）
+  setSliderX(atFeed ? feedX : homeX, false);
+}
+function goFeedPanel() { atFeed = true; setSliderX(feedX); }
+function goHomePanel() { atFeed = false; setSliderX(homeX); }
+window.addEventListener('resize', layoutSlider);
+// 表示直後に幅0のことがあるので、確定した瞬間にレイアウト
+if (window.ResizeObserver) new ResizeObserver(() => layoutSlider()).observe(sliderVp);
+
+(() => {
+  let sx = null, sy = null, base = 0, horiz = null;
+  sliderVp.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; base = curX; horiz = null;
+  }, { passive: true });
+  sliderVp.addEventListener('touchmove', e => {
+    if (sx === null) return;
+    const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+    if (horiz === null) {
+      if (Math.abs(dx) + Math.abs(dy) < 8) return;
+      horiz = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!horiz) return;             // 縦スクロールはそのまま
+    e.preventDefault();
+    let nx = Math.max(homeX, Math.min(feedX, base + dx));
+    setSliderX(nx, false);
+  }, { passive: false });
+  sliderVp.addEventListener('touchend', () => {
+    if (sx === null) return;
+    const wasHoriz = horiz; sx = null;
+    if (!wasHoriz) return;
+    (curX > (homeX + feedX) / 2) ? goFeedPanel() : goHomePanel();
+  });
+})();
+
+// ホームへ戻る共通処理（育成メイン表示＋左に友達フィードちら見え）
 function goHome() {
   updateTitle();
-  renderBuddyBar();
+  renderHomeBuddy();
   renderVisSeg();
   renderFriendChips(state.friendsCache || []);
   renderFeed();
-  show('screen-feed');
+  atFeed = false;
+  show('screen-home');
+  requestAnimationFrame(layoutSlider);
 }
 document.getElementById('btnShoot').onclick = openCamera;
-document.getElementById('buddyBar').onclick = () => { renderBuddy(); show('screen-buddy'); };
+document.getElementById('btnBuddySwitch').onclick = () => { renderBuddy(); show('screen-buddy'); };
 document.getElementById('btnToAlbum').onclick = () => { renderAlbum(); show('screen-album'); };
-
-// インスタ風：フィードを右にスワイプすると撮影へ
-(() => {
-  const el = document.getElementById('screen-feed');
-  let sx = null, sy = null;
-  el.addEventListener('touchstart', e => {
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-  }, { passive: true });
-  el.addEventListener('touchend', e => {
-    if (sx === null) return;
-    const dx = e.changedTouches[0].clientX - sx;
-    const dy = e.changedTouches[0].clientY - sy;
-    sx = null;
-    if (dx > 70 && Math.abs(dy) < 60) openCamera();
-  });
-})();
 
 // ---------- 撮影 ----------
 async function openCamera() {
@@ -900,8 +940,6 @@ async function renderFeed() {
     state.friendsCache = d.friends;
     saveState();
     renderFriendChips(d.friends);
-    document.getElementById('feedInfo').textContent =
-      `右にスワイプ（または📸）で撮影／フィードに載るのは1日2回まで`;
     if (!d.items.length) {
       listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>右下の📸で乾杯を投稿したり、👥から友達を追加してみよう🍻</div>';
       return;
@@ -950,28 +988,15 @@ function inviteLink() {
 function inviteMsg() {
   return `${state.userName}と乾杯フレンドになろう🍻\n①リンクをタップ（Safari推奨）\n${inviteLink()}\n\nうまくいかない時は、このコードをアプリの「友達のコードで追加」に貼ってね👇\n${myCode()}`;
 }
-document.getElementById('btnInvite').onclick = () => { document.getElementById('inviteSheet').hidden = false; };
-document.getElementById('btnInviteClose').onclick = () => { document.getElementById('inviteSheet').hidden = true; };
-document.getElementById('btnInviteLine').onclick = () => {
-  window.open('https://line.me/R/share?text=' + encodeURIComponent(inviteMsg()), '_blank');
-};
-document.getElementById('btnInviteInsta').onclick = async () => {
-  try {
-    await navigator.clipboard.writeText(inviteMsg());
-    alert('招待メッセージをコピーしたよ！\nインスタのDMにペースト（長押し→ペースト）して送ってね🍻');
-    location.href = 'instagram://direct/inbox';
-  } catch (e) {
-    prompt('この招待メッセージをコピーして、インスタのDMで送ってね', inviteMsg());
-  }
-};
-document.getElementById('btnInviteOther').onclick = async () => {
-  const link = inviteLink();
-  const text = `${state.userName}と乾杯フレンドになろう🍻 リンクはSafari（ブラウザ）で開いてね`;
+// 招待はOSの共有シート1本（LINE公式に飛ぶ line.me/R/share は使わない）
+// リンク＋コードのメッセージをまるごと共有 → 相手はLINE/インスタ/メッセージ等どれでも選べる
+document.getElementById('btnInvite').onclick = async () => {
+  const msg = inviteMsg();
   if (navigator.share) {
-    try { await navigator.share({ title: '酒育日記', text, url: link }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ text: msg }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
-  try { await navigator.clipboard.writeText(link); alert('招待リンクをコピーしたよ！好きなアプリで送ってね🍻'); }
-  catch (e) { prompt('この招待リンクを友達に送ってね', link); }
+  try { await navigator.clipboard.writeText(msg); alert('招待メッセージをコピーしたよ！\nLINEやインスタに貼り付けて送ってね🍻'); }
+  catch (e) { prompt('この招待メッセージを友達に送ってね', msg); }
 };
 
 // フレンドチップ（フィード上部・タップでフレンド画面へ）

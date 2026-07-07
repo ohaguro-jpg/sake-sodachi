@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=20">
 </head>
 <body>
 
@@ -28,8 +28,8 @@
   <button id="btnStartConfirm" class="btnPrimary" disabled>これではじめる</button>
 </section>
 
-<!-- ===== ホーム＝乾杯フィード（インスタ風・右スワイプで撮影） ===== -->
-<section id="screen-feed" class="screen">
+<!-- ===== ホーム＝育成⇄フィード横スライダー ===== -->
+<section id="screen-home" class="screen homeScreen">
   <header class="homeHead">
     <h1 class="appTitle fCal" id="homeTitle">酒育日記</h1>
     <div class="headBtns">
@@ -39,24 +39,41 @@
       <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
     </div>
   </header>
-  <div id="buddyBar" class="buddyBar">
-    <div id="bbChar" class="bbChar"></div>
-    <div class="bbInfo">
-      <div class="bbName"><b id="bbName"></b> <span id="bbLv" class="lvTag"></span></div>
-      <div class="progressBar mini"><div id="bbProgress" class="progressFill"></div></div>
-      <div id="bbSub" class="bbSub"></div>
+  <div class="sliderViewport" id="sliderViewport">
+    <div class="sliderTrack" id="sliderTrack">
+      <!-- 左パネル：みんなの乾杯（友達フィード） -->
+      <section class="panel panelFeed">
+        <div class="feedTitle fCal">みんなの乾杯 🍻</div>
+        <div id="friendChips" class="friendChips"></div>
+        <div class="ctrlRow" style="justify-content:center">
+          <span class="ctrlLbl">のせる範囲</span>
+          <div class="segGroup" id="visSeg">
+            <button data-v="friends">友達だけ</button>
+            <button data-v="all">みんな</button>
+          </div>
+        </div>
+        <div id="feedList" class="feedList"></div>
+      </section>
+      <!-- 右パネル：育成（相棒メイン） -->
+      <section class="panel panelHome">
+        <div class="homeInner">
+          <div class="buddyStageBig">
+            <div id="homeChar" class="homeCharBig"></div>
+            <div class="buddyName"><b id="homeCharName"></b> <span id="homeCharLv" class="lvTag"></span></div>
+            <div class="progressBar"><div id="homeProgress" class="progressFill"></div></div>
+            <div id="homeProgressLabel" class="progressLabel"></div>
+          </div>
+          <div id="homeStatus" class="homeStatus"></div>
+          <div class="homeStats">
+            <div class="stat"><div class="statNum" id="statDays">0</div><div class="statLbl">乾杯した日</div></div>
+            <div class="stat"><div class="statNum" id="statStreak">0</div><div class="statLbl">連続日数</div></div>
+          </div>
+          <button class="btnGhost" id="btnBuddySwitch" style="margin-top:12px">🐣 相棒をかえる・ずかん</button>
+          <div class="peekHint">← よこにスワイプで<br>みんなの乾杯 🍻</div>
+        </div>
+      </section>
     </div>
   </div>
-  <div id="friendChips" class="friendChips"></div>
-  <div class="ctrlRow" style="justify-content:center">
-    <span class="ctrlLbl">のせる範囲</span>
-    <div class="segGroup" id="visSeg">
-      <button data-v="friends">友達だけ</button>
-      <button data-v="all">みんな</button>
-    </div>
-  </div>
-  <p class="editHint" style="text-align:center;margin-top:6px" id="feedInfo">右にスワイプ（または📸ボタン）で撮影できるよ</p>
-  <div id="feedList" class="feedList"></div>
   <button id="btnShoot" class="fab" title="撮影">📸</button>
 </section>
 
@@ -91,17 +108,6 @@
     <p class="editHint">ひとことはタップするとおかわりが出るよ 🎲　スタンプと相棒はドラッグで移動できるよ</p>
   </div>
 </section>
-
-<!-- ===== 友達を招待シート ===== -->
-<div id="inviteSheet" class="sheet" hidden>
-  <div class="sheetInner">
-    <div class="sheetHead"><span class="fCal">友達を招待</span><button class="iconBtn" id="btnInviteClose">✕</button></div>
-    <button class="inviteBtn line" id="btnInviteLine">LINEで送る</button>
-    <button class="inviteBtn insta" id="btnInviteInsta">Instagramで送る</button>
-    <button class="inviteBtn other" id="btnInviteOther">その他の方法で送る</button>
-    <p class="editHint" style="text-align:center">インスタはリンクの自動添付ができないから、コピーした招待メッセージをDMに貼ってね。<br>受け取った友達には、リンクを<b>Safari（ブラウザ）で開いて</b>もらってね🙏</p>
-  </div>
-</div>
 
 <!-- ===== 酒ルーレット ===== -->
 <div id="rouletteSheet" class="sheet" hidden>
@@ -154,7 +160,7 @@
     <div id="myCode" class="myCode">…</div>
     <button id="btnCopyCode" class="btnPrimary btnSmall2">📋 コードをコピー</button>
     <p class="fcHint">このコードを友達に送ってね。友達が下の欄に貼り付けるだけで、どこにいても追加できるよ（同じWi-Fiじゃなくても大丈夫）</p>
-    <button id="btnInvite" class="btnGhost" style="margin-top:8px">🍻 LINE / インスタで送る</button>
+    <button id="btnInvite" class="btnGhost" style="margin-top:8px">🍻 SNSでシェアして招待</button>
   </div>
 
   <div class="friendCard">
@@ -200,7 +206,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=19"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/data.js?v=20"></script>
+<script src="js/app.js?v=20"></script>
 </body>
 </html>
