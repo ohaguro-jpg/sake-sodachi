@@ -344,14 +344,9 @@ const FONTS = [
   { id: 'boku',  label: '墨太', family: 'Yuji Boku' }
 ];
 
-// レベル閾値（相棒ごとの累計ポイント）
-const LEVEL_THRESHOLDS = [0, 50, 120, 220, 350];
+// レベル閾値（相棒ごとの累計ポイント。1日+10の撮るだけ運用に合わせた値）
+const LEVEL_THRESHOLDS = [0, 30, 80, 150, 250];
 const BASE_POINTS = 10;
-const RANKS = [
-  { id: 'normal',  label: '普段の一本',   bonus: 0 },
-  { id: 'good',    label: 'ちょっといい', bonus: 5 },
-  { id: 'special', label: '特別な一本',   bonus: 15 }
-];
 
 // 表示用インラインSVG（ページ内共有defs参照）
 function charSvgInline(charId, lv) {

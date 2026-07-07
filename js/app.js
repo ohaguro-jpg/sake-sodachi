@@ -180,26 +180,42 @@ document.getElementById('filePick').onchange = async (ev) => {
 };
 
 // ---------- 編集 ----------
+const SHAPES = ['A', 'B', 'C'];
+function randomStamp() {
+  return {
+    phrase: PHRASES[Math.floor(Math.random() * PHRASES.length)],
+    shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+    rot: Math.round(Math.random() * 14 - 7),
+    fx: .32 + Math.random() * .36,
+    fy: .28 + Math.random() * .4
+  };
+}
+
 function openEditor() {
   stopCamera();
+  const r = randomStamp();
   edit = {
-    rank: 0,
-    phrase: PHRASES[Math.floor(Math.random() * PHRASES.length)],
+    phrase: r.phrase,
     font: state.settings.font,
-    shape: state.settings.shape,
+    shape: r.shape,
     beauty: 0.35,
-    stamp: { fx: .5, fy: .66, size: 24, rot: -4 },
+    stamp: { fx: r.fx, fy: r.fy, size: 24, rot: r.rot },
     chara: { fx: .8, fy: .8, size: 26, rot: 0 },
     selected: 'stamp'
   };
-  document.getElementById('beautySlider').value = 35;
-  renderRankGroup();
-  renderFontGroup();
-  renderShapeGroup();
-  syncSliders();
   drawEditCanvas();
   renderOverlays();
   show('screen-edit');
+}
+
+// ひとことのおかわり（スタンプをタップ）
+function rerollStamp() {
+  let r = randomStamp();
+  while (r.phrase === edit.phrase) r = randomStamp();
+  edit.phrase = r.phrase;
+  edit.shape = r.shape;
+  edit.stamp.rot = r.rot;
+  renderOverlays();
 }
 document.getElementById('btnEditBack').onclick = openCamera;
 
@@ -236,48 +252,6 @@ function renderBase(ctx, W, H) {
   ctx.restore();
 }
 
-// ---- 編集UI ----
-function renderRankGroup() {
-  const g = document.getElementById('rankGroup');
-  g.innerHTML = '';
-  RANKS.forEach((r, i) => {
-    const b = document.createElement('button');
-    b.textContent = `${r.label}${r.bonus ? ` +${r.bonus}` : ''}`;
-    b.className = edit.rank === i ? 'on' : '';
-    b.onclick = () => { edit.rank = i; renderRankGroup(); };
-    g.appendChild(b);
-  });
-}
-function renderFontGroup() {
-  const g = document.getElementById('fontGroup');
-  g.innerHTML = '';
-  FONTS.forEach(f => {
-    const b = document.createElement('button');
-    b.textContent = f.label;
-    b.className = edit.font === f.id ? 'on' : '';
-    b.onclick = () => { edit.font = f.id; state.settings.font = f.id; saveState(); renderFontGroup(); renderOverlays(); };
-    g.appendChild(b);
-  });
-}
-function renderShapeGroup() {
-  const g = document.getElementById('shapeGroup');
-  g.innerHTML = '';
-  [['A', '座布団'], ['B', '縁取り'], ['C', '掛け軸']].forEach(([id, label]) => {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.className = edit.shape === id ? 'on' : '';
-    b.onclick = () => { edit.shape = id; state.settings.shape = id; saveState(); renderShapeGroup(); renderOverlays(); };
-    g.appendChild(b);
-  });
-}
-document.getElementById('beautySlider').oninput = (e) => { edit.beauty = e.target.value / 100; drawEditCanvas(); };
-document.getElementById('sizeSlider').oninput = (e) => { edit[edit.selected].size = +e.target.value; renderOverlays(); };
-document.getElementById('rotSlider').oninput = (e) => { edit[edit.selected].rot = +e.target.value; renderOverlays(); };
-function syncSliders() {
-  document.getElementById('sizeSlider').value = edit[edit.selected].size;
-  document.getElementById('rotSlider').value = edit[edit.selected].rot;
-}
-
 function fontFamily() { return FONTS.find(f => f.id === edit.font).family; }
 
 // ---- オーバーレイ（スタンプ＆相棒）----
@@ -296,7 +270,6 @@ function renderOverlays() {
   ov.style.left = s.fx * 100 + '%';
   ov.style.top = s.fy * 100 + '%';
   ov.style.transform = `translate(-50%,-50%) rotate(${s.rot}deg)`;
-  ov.classList.toggle('sel', edit.selected === 'stamp');
 
   const oc = document.getElementById('ovChara');
   const c = edit.chara;
@@ -308,22 +281,20 @@ function renderOverlays() {
   oc.style.left = c.fx * 100 + '%';
   oc.style.top = c.fy * 100 + '%';
   oc.style.transform = `translate(-50%,-50%) rotate(${c.rot}deg)`;
-  oc.classList.toggle('sel', edit.selected === 'chara');
-
-  document.getElementById('btnPhrase').textContent = edit.phrase;
 }
 
-// ドラッグ
+// ドラッグ（動かさずに離したらタップ扱い→スタンプはひとことおかわり）
 function setupDrag(elId, key) {
   const el = document.getElementById(elId);
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    edit.selected = key;
-    syncSliders();
-    renderOverlays();
     el.setPointerCapture(e.pointerId);
     const rect = stageEl().getBoundingClientRect();
+    const x0 = e.clientX, y0 = e.clientY;
+    let moved = false;
     const move = (ev) => {
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 6 && !moved) return;
+      moved = true;
       edit[key].fx = Math.min(.97, Math.max(.03, (ev.clientX - rect.left) / rect.width));
       edit[key].fy = Math.min(.97, Math.max(.03, (ev.clientY - rect.top) / rect.height));
       renderOverlays();
@@ -331,6 +302,7 @@ function setupDrag(elId, key) {
     const up = () => {
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
+      if (!moved && key === 'stamp') rerollStamp();
     };
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', up);
@@ -338,21 +310,6 @@ function setupDrag(elId, key) {
 }
 setupDrag('ovStamp', 'stamp');
 setupDrag('ovChara', 'chara');
-
-// ---- フレーズ選択 ----
-document.getElementById('btnPhrase').onclick = () => {
-  const list = document.getElementById('phraseList');
-  list.innerHTML = '';
-  PHRASES.forEach(p => {
-    const b = document.createElement('button');
-    b.textContent = p;
-    b.className = p === edit.phrase ? 'on' : '';
-    b.onclick = () => { edit.phrase = p; renderOverlays(); document.getElementById('phraseSheet').hidden = true; };
-    list.appendChild(b);
-  });
-  document.getElementById('phraseSheet').hidden = false;
-};
-document.getElementById('btnPhraseClose').onclick = () => { document.getElementById('phraseSheet').hidden = true; };
 
 // ---------- 保存（合成→カメラロール→記録） ----------
 document.getElementById('btnSave').onclick = async () => {
@@ -389,12 +346,12 @@ async function savePhoto() {
 
   // 記録＆ポイント（1日1回）
   const first = !hasRecordToday();
-  const pts = first ? BASE_POINTS + RANKS[edit.rank].bonus : 0;
+  const pts = first ? BASE_POINTS : 0;
   const prevLv = levelOf(state.buddyPoints[state.buddy] || 0);
   if (first) state.buddyPoints[state.buddy] = (state.buddyPoints[state.buddy] || 0) + pts;
   const newLv = levelOf(state.buddyPoints[state.buddy] || 0);
   state.records.push({
-    date: todayStr(new Date(photoTs)), ts: photoTs, rank: edit.rank,
+    date: todayStr(new Date(photoTs)), ts: photoTs,
     phrase: edit.phrase, pts, charId: state.buddy, thumb
   });
   saveState();
@@ -512,7 +469,7 @@ function showCelebrate(pts, prevLv, newLv, first) {
   document.getElementById('celebrateTitle').textContent =
     evolved ? `${c.levels[newLv - 1].name} に進化！！` : '今日も乾杯！';
   document.getElementById('celebratePts').textContent =
-    first ? `+${pts} pt（${RANKS[edit.rank].label}）` : 'ポイントは今日はもう獲得済み';
+    first ? `+${pts} pt` : 'ポイントは今日はもう獲得済み';
   document.getElementById('celebrateNote').textContent =
     evolved ? c.levels[newLv - 1].sub : '写真はカメラロールに保存したよ。また明日、乾杯🍻';
   document.getElementById('celebrate').hidden = false;
@@ -545,7 +502,7 @@ function openViewer(r) {
   document.getElementById('viewerImg').src = r.thumb;
   const c = CHARACTERS[r.charId];
   document.getElementById('viewerInfo').innerHTML =
-    `「${r.phrase}」<br>${RANKS[r.rank].label}／+${r.pts}pt／相棒: ${c.name}`;
+    `「${r.phrase}」<br>+${r.pts}pt／相棒: ${c.name}`;
   document.getElementById('albumViewer').hidden = false;
 }
 document.getElementById('btnViewerClose').onclick = () => { document.getElementById('albumViewer').hidden = true; };
