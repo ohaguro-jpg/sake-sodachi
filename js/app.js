@@ -553,6 +553,66 @@ function renderBuddy() {
 }
 document.getElementById('btnBuddyBack').onclick = () => { renderHome(); show('screen-home'); };
 
+// ---------- 酒ルーレット ----------
+const ROULETTE_ITEMS = [
+  { label: 'ビール',   color: '#e8a33d' },
+  { label: 'テキーラ', color: '#7d9b4e' },
+  { label: 'ブーブ',   color: '#b3362f' },
+  { label: 'ドンペリ', color: '#3b5b8c' },
+  { label: 'スナック', color: '#c9403a' },
+  { label: '赤ワイン', color: '#6e211b' }
+];
+let wheelAngle = 0, spinning = false, wheelBuilt = false;
+
+function buildWheel() {
+  const n = ROULETTE_ITEMS.length, R = 98;
+  let parts = '';
+  ROULETTE_ITEMS.forEach((it, i) => {
+    const a0 = (i * 360 / n - 90) * Math.PI / 180;
+    const a1 = ((i + 1) * 360 / n - 90) * Math.PI / 180;
+    const x0 = 100 + R * Math.cos(a0), y0 = 100 + R * Math.sin(a0);
+    const x1 = 100 + R * Math.cos(a1), y1 = 100 + R * Math.sin(a1);
+    parts += `<path d="M100 100 L${x0.toFixed(2)} ${y0.toFixed(2)} A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)} z" fill="${it.color}" stroke="#262019" stroke-width="2.5"/>`;
+    const mid = (i + .5) * 360 / n;
+    parts += `<text x="100" y="40" text-anchor="middle" transform="rotate(${mid} 100 100)" fill="#fffcf2" font-size="14" font-family="'Yuji Boku','Yuji Syuku',serif">${it.label}</text>`;
+  });
+  document.getElementById('wheel').innerHTML =
+    `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="${R}" fill="none" stroke="#262019" stroke-width="5"/>${parts}` +
+    `<circle cx="100" cy="100" r="15" fill="#fffcf2" stroke="#262019" stroke-width="3"/>` +
+    `<text x="100" y="105.5" text-anchor="middle" font-size="13" fill="#262019" font-family="'Yuji Boku',serif">酒</text></svg>`;
+  wheelBuilt = true;
+}
+
+function spinRoulette() {
+  if (spinning) return;
+  spinning = true;
+  const res = document.getElementById('rouletteResult');
+  res.textContent = '';
+  const n = ROULETTE_ITEMS.length;
+  const win = Math.floor(Math.random() * n);
+  const jitter = Math.random() * 36 - 18;
+  // 当たりセクター中心が針（真上）に来る絶対角度へ、4回転以上足して着地
+  const d = ((360 - (win + .5) * 360 / n + jitter) % 360 + 360) % 360;
+  let target = wheelAngle + 1440;
+  target += ((d - (target % 360)) % 360 + 360) % 360;
+  wheelAngle = target;
+  const wheel = document.getElementById('wheel');
+  wheel.style.transition = 'transform 3.2s cubic-bezier(.12,.72,.08,1)';
+  wheel.style.transform = `rotate(${target}deg)`;
+  setTimeout(() => {
+    spinning = false;
+    res.textContent = `今夜は「${ROULETTE_ITEMS[win].label}」！🍻`;
+  }, 3300);
+}
+
+document.getElementById('btnRouletteOpen').onclick = () => {
+  if (!wheelBuilt) buildWheel();
+  document.getElementById('rouletteResult').textContent = '';
+  document.getElementById('rouletteSheet').hidden = false;
+};
+document.getElementById('btnRouletteClose').onclick = () => { document.getElementById('rouletteSheet').hidden = true; };
+document.getElementById('wheel').addEventListener('click', spinRoulette);
+
 // ---------- 開発用：デモ写真で編集画面を試す ----------
 window.__demo = function () {
   const cv = document.createElement('canvas');

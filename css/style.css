@@ -219,6 +219,17 @@ input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--red); }
 .celebratePts { font-size: 20px; font-weight: 800; color: var(--red); margin-top: 6px; }
 .celebrateNote { font-size: 12.5px; color: var(--grey); margin-top: 6px; line-height: 1.7; }
 
+/* 酒ルーレット */
+.wheelWrap { position: relative; width: min(78vw, 300px); margin: 10px auto 0; }
+.wheelPointer {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%); z-index: 2;
+  width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent;
+  border-top: 22px solid var(--ink);
+}
+.wheel { cursor: pointer; touch-action: manipulation; }
+.wheel svg { width: 100%; height: auto; display: block; }
+.rouletteResult { font-size: 30px; min-height: 46px; margin-top: 12px; }
+
 /* アルバム */
 .albumGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .albumGrid .cell {

@@ -31,6 +31,7 @@
   <header class="homeHead">
     <h1 class="appTitle fCal">酒育て日記</h1>
     <div class="headBtns">
+      <button class="iconBtn" id="btnRouletteOpen" title="酒ルーレット">🎰</button>
       <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>
       <button class="iconBtn" id="btnToAlbum" title="アルバム">📚</button>
     </div>
@@ -82,6 +83,19 @@
     <p class="editHint">ひとことはタップするとおかわりが出るよ 🎲　スタンプと相棒はドラッグで移動できるよ</p>
   </div>
 </section>
+
+<!-- ===== 酒ルーレット ===== -->
+<div id="rouletteSheet" class="sheet" hidden>
+  <div class="sheetInner" style="text-align:center">
+    <div class="sheetHead"><span class="fCal">今夜の酒ルーレット</span><button class="iconBtn" id="btnRouletteClose">✕</button></div>
+    <div class="wheelWrap">
+      <div class="wheelPointer"></div>
+      <div id="wheel" class="wheel"></div>
+    </div>
+    <div id="rouletteResult" class="rouletteResult fCal"></div>
+    <p class="editHint">ルーレットをタップして回す！　もう一回タップで回し直し</p>
+  </div>
+</div>
 
 <!-- ===== 保存完了・進化演出 ===== -->
 <div id="celebrate" class="celebrate" hidden>
