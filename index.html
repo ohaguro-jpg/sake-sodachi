@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f8f2e4">
+<title>酒育て日記</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 共有SVG defs（筆タッチフィルタ等） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" id="svgDefs"><defs></defs></svg>
+
+<!-- ===== 初回：相棒えらび ===== -->
+<section id="screen-start" class="screen">
+  <h1 class="appTitle fCal">酒育て日記</h1>
+  <p class="sub">いっしょに晩酌する相棒を1匹えらんでね。<br>育ちきるまでずっと一緒だよ。</p>
+  <div id="startCards" class="charGrid"></div>
+  <button id="btnStartConfirm" class="btnPrimary" disabled>この子にする</button>
+</section>
+
+<!-- ===== ホーム ===== -->
+<section id="screen-home" class="screen">
+  <header class="homeHead">
+    <h1 class="appTitle fCal">酒育て日記</h1>
+    <div class="headBtns">
+      <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>
+      <button class="iconBtn" id="btnToAlbum" title="アルバム">📚</button>
+    </div>
+  </header>
+  <div class="buddyStage">
+    <div id="homeChar" class="homeChar"></div>
+    <div class="buddyName"><span id="homeCharName"></span> <span id="homeCharLv" class="lvTag"></span></div>
+    <div class="progressWrap">
+      <div class="progressBar"><div id="homeProgress" class="progressFill"></div></div>
+      <div id="homeProgressLabel" class="progressLabel"></div>
+    </div>
+  </div>
+  <div class="homeStats">
+    <div class="stat"><div class="statNum" id="statPoints">0</div><div class="statLbl">ポイント</div></div>
+    <div class="stat"><div class="statNum" id="statDays">0</div><div class="statLbl">乾杯した日</div></div>
+    <div class="stat"><div class="statNum" id="statStreak">0</div><div class="statLbl">連続日数</div></div>
+  </div>
+  <div id="todayStatus" class="todayStatus"></div>
+  <button id="btnShoot" class="btnPrimary btnShoot">📸 今日のお酒と一緒にパシャ</button>
+</section>
+
+<!-- ===== 撮影 ===== -->
+<section id="screen-camera" class="screen dark">
+  <div class="camWrap">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="camGuide">今日のお酒と一緒にパシャ 📸</div>
+    <div class="camDt" id="camDt"></div>
+    <div id="camError" class="camError" hidden></div>
+  </div>
+  <div class="camCtrls">
+    <button class="iconBtn light" id="btnCamClose">✕</button>
+    <button id="btnShutter" class="shutter" title="シャッター"></button>
+    <label class="iconBtn light" title="写真から選ぶ">🖼<input type="file" id="filePick" accept="image/*" hidden></label>
+  </div>
+</section>
+
+<!-- ===== 編集 ===== -->
+<section id="screen-edit" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnEditBack">←</button>
+    <div class="editTitle fCal">仕上げ</div>
+    <button id="btnSave" class="btnPrimary btnSmall">保存する</button>
+  </div>
+  <div id="editStage" class="editStage">
+    <canvas id="editCanvas"></canvas>
+    <div id="ovStamp" class="overlay"></div>
+    <div id="ovChara" class="overlay"></div>
+  </div>
+  <div class="editPanel">
+    <div class="ctrlRow">
+      <span class="ctrlLbl">今日の一本</span>
+      <div class="segGroup" id="rankGroup"></div>
+    </div>
+    <div class="ctrlRow">
+      <span class="ctrlLbl">ひとこと</span>
+      <button id="btnPhrase" class="phraseBtn fCal">タップしてえらぶ</button>
+    </div>
+    <div class="ctrlRow">
+      <span class="ctrlLbl">書体</span>
+      <div class="segGroup" id="fontGroup"></div>
+      <span class="ctrlLbl" style="margin-left:10px">かたち</span>
+      <div class="segGroup" id="shapeGroup"></div>
+    </div>
+    <div class="ctrlRow">
+      <span class="ctrlLbl">美肌</span>
+      <input type="range" id="beautySlider" min="0" max="100" value="35">
+    </div>
+    <div class="ctrlRow">
+      <span class="ctrlLbl">大きさ</span>
+      <input type="range" id="sizeSlider" min="14" max="60" value="26">
+      <span class="ctrlLbl">かたむき</span>
+      <input type="range" id="rotSlider" min="-30" max="30" value="-4">
+    </div>
+    <p class="editHint">スタンプと相棒は指でドラッグして動かせるよ（タップで選択→スライダーが効く）</p>
+  </div>
+</section>
+
+<!-- ===== フレーズ選択シート ===== -->
+<div id="phraseSheet" class="sheet" hidden>
+  <div class="sheetInner">
+    <div class="sheetHead"><span class="fCal">ひとことをえらぶ</span><button class="iconBtn" id="btnPhraseClose">✕</button></div>
+    <div id="phraseList" class="phraseList"></div>
+  </div>
+</div>
+
+<!-- ===== 保存完了・進化演出 ===== -->
+<div id="celebrate" class="celebrate" hidden>
+  <div class="celebrateInner">
+    <div id="celebrateBurst" class="celebrateBurst"></div>
+    <div id="celebrateChar" class="celebrateChar"></div>
+    <div id="celebrateTitle" class="celebrateTitle fCal"></div>
+    <div id="celebratePts" class="celebratePts"></div>
+    <div id="celebrateNote" class="celebrateNote"></div>
+    <button id="btnCelebrateOk" class="btnPrimary">やったー！</button>
+  </div>
+</div>
+
+<!-- ===== アルバム ===== -->
+<section id="screen-album" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnAlbumBack">←</button>
+    <div class="editTitle fCal">乾杯アルバム</div>
+    <span style="width:44px"></span>
+  </div>
+  <div id="albumGrid" class="albumGrid"></div>
+  <p class="editHint">写真の本体はカメラロールに保存されてるよ（ここにあるのはサムネイル）</p>
+</section>
+
+<!-- ===== アルバム拡大 ===== -->
+<div id="albumViewer" class="sheet" hidden>
+  <div class="sheetInner">
+    <div class="sheetHead"><span id="viewerDate" class="fCal"></span><button class="iconBtn" id="btnViewerClose">✕</button></div>
+    <img id="viewerImg" class="viewerImg" alt="">
+    <div id="viewerInfo" class="viewerInfo"></div>
+  </div>
+</div>
+
+<!-- ===== 相棒ステータス／切替 ===== -->
+<section id="screen-buddy" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnBuddyBack">←</button>
+    <div class="editTitle fCal">相棒たち</div>
+    <span style="width:44px"></span>
+  </div>
+  <p class="sub" id="buddyRule"></p>
+  <div id="buddyCards" class="charGrid"></div>
+</section>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

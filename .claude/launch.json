@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sake-sodachi",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4477", "-d", "/Users/yuji/sake-sodachi"],
+      "port": 4477
+    }
+  ]
+}
