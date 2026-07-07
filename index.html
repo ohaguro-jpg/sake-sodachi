@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 
@@ -34,6 +34,7 @@
     <h1 class="appTitle fCal" id="homeTitle">酒育日記</h1>
     <div class="headBtns">
       <button class="iconBtn" id="btnRouletteOpen" title="酒ルーレット">🎰</button>
+      <button class="iconBtn" id="btnToFeed" title="乾杯フィード">🍻</button>
       <button class="iconBtn" id="btnToBuddy" title="相棒">🐣</button>
       <button class="iconBtn" id="btnToAlbum" title="アルバム">📚</button>
     </div>
@@ -118,10 +119,30 @@
     <div id="celebrateTitle" class="celebrateTitle fCal"></div>
     <div id="celebratePts" class="celebratePts"></div>
     <div id="celebrateNote" class="celebrateNote"></div>
+    <button id="btnPostFeed" class="btnGhost">🍻 乾杯フィードに載せる</button>
     <button id="btnStory" class="btnGhost">📤 ストーリー用に共有</button>
     <button id="btnCelebrateOk" class="btnPrimary">やったー！</button>
   </div>
 </div>
+
+<!-- ===== 乾杯フィード ===== -->
+<section id="screen-feed" class="screen">
+  <div class="editTop">
+    <button class="iconBtn" id="btnFeedBack">←</button>
+    <div class="editTitle fCal">乾杯フィード</div>
+    <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
+  </div>
+  <button id="btnInvite" class="btnGhost" style="margin-top:0">🍻 友達をさそう（リンクを送る）</button>
+  <div class="ctrlRow" style="justify-content:center">
+    <span class="ctrlLbl">のせる範囲</span>
+    <div class="segGroup" id="visSeg">
+      <button data-v="friends">友達だけ</button>
+      <button data-v="all">みんな</button>
+    </div>
+  </div>
+  <p class="editHint" style="text-align:center;margin-top:6px" id="feedInfo">フィードに載せられるのは1日2回まで。写真は選んだ範囲の人にだけ見えるよ</p>
+  <div id="feedList" class="feedList"></div>
+</section>
 
 <!-- ===== アルバム ===== -->
 <section id="screen-album" class="screen">
@@ -154,7 +175,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=14"></script>
-<script src="js/app.js?v=14"></script>
+<script src="js/data.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@
 
 const LS_KEY = 'sakeSodachi.v1';
 const FINAL_W = 1080, FINAL_H = 1440;
+const API_BASE = 'https://sake-sodachi-api.vercel.app/api';
 
 let state = loadState();
 let stream = null;
@@ -27,6 +28,15 @@ function loadState() {
   };
 }
 function saveState() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+// フレンド機能用のID・設定（既存ユーザーにも補完）
+function randHex(n) {
+  const a = new Uint8Array(n);
+  crypto.getRandomValues(a);
+  return [...a].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+if (!state.uid) { state.uid = randHex(12); saveState(); }
+if (!state.share) { state.share = { vis: 'friends' }; saveState(); }
 
 function levelOf(points) {
   let lv = 1;
@@ -104,6 +114,7 @@ document.getElementById('btnStartConfirm').onclick = () => {
   updateTitle();
   renderHome();
   show('screen-home');
+  if (pendingInvite) { const inv = pendingInvite; pendingInvite = null; acceptInvite(inv); }
 };
 
 // ---------- ホーム ----------
@@ -581,6 +592,9 @@ function showCelebrate(pts, prevLv, newLv, first, bonusLabel) {
     : '（育つのは1日1回だよ）';
   document.getElementById('celebrateNote').textContent =
     evolved ? c.levels[newLv - 1].sub : '写真はカメラロールに保存したよ。また明日、乾杯🍻';
+  const pb = document.getElementById('btnPostFeed');
+  pb.disabled = false;
+  pb.textContent = '🍻 乾杯フィードに載せる';
   cel.hidden = false;
 }
 // ---------- ストーリー用共有（1080x1920 縦長に自動レイアウト） ----------
@@ -815,6 +829,123 @@ document.getElementById('btnRouletteOpen').onclick = () => {
 document.getElementById('btnRouletteClose').onclick = () => { document.getElementById('rouletteSheet').hidden = true; };
 document.getElementById('wheel').addEventListener('click', spinRoulette);
 
+// ---------- 乾杯フィード（フレンド機能） ----------
+async function api(path, method = 'GET', body) {
+  const r = await fetch(API_BASE + path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.error || 'api'); e.code = r.status; throw e; }
+  return d;
+}
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+function timeAgo(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'たったいま';
+  if (m < 60) return `${m}分前`;
+  if (m < 60 * 24) return `${Math.floor(m / 60)}時間前`;
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function renderVisSeg() {
+  document.querySelectorAll('#visSeg button').forEach(b =>
+    b.classList.toggle('on', b.dataset.v === state.share.vis));
+}
+document.querySelectorAll('#visSeg button').forEach(b => {
+  b.onclick = () => { state.share.vis = b.dataset.v; saveState(); renderVisSeg(); };
+});
+
+async function renderFeed() {
+  const listEl = document.getElementById('feedList');
+  listEl.innerHTML = '<div class="albumEmpty">よみこみ中…🍶</div>';
+  try {
+    const d = await api(`/feed?uid=${state.uid}`);
+    document.getElementById('feedInfo').textContent =
+      `友達 ${d.friends.length}人 ／ 載せられるのは1日2回まで・選んだ範囲の人にだけ見えるよ`;
+    if (!d.items.length) {
+      listEl.innerHTML = '<div class="albumEmpty">まだ誰の乾杯もないよ。<br>「友達をさそう」でリンクを送ってみよう🍻</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    d.items.forEach(m => {
+      const c = CHARACTERS[m.charId];
+      const div = document.createElement('div');
+      div.className = 'feedCard';
+      div.innerHTML = `<img loading="lazy" src="${esc(m.img)}" alt="">
+        <div class="feedMeta"><b>${esc(m.name)}</b> × ${c ? c.levels[(m.lv || 1) - 1].name : '相棒'}
+        <span class="feedTime">${timeAgo(m.ts)}${m.uid === state.uid ? '・自分' : ''}${m.vis === 'all' ? '・みんな公開' : ''}</span><br>
+        <span class="fCal">乾杯 ${m.dayN}日目</span>　「${esc(m.phrase)}」</div>`;
+      listEl.appendChild(div);
+    });
+  } catch (e) {
+    listEl.innerHTML = '<div class="albumEmpty">よみこめなかった…😢<br>電波を確認して🔄で更新してみて</div>';
+  }
+}
+document.getElementById('btnToFeed').onclick = () => { renderVisSeg(); renderFeed(); show('screen-feed'); };
+document.getElementById('btnFeedBack').onclick = () => { renderHome(); show('screen-home'); };
+document.getElementById('btnFeedReload').onclick = renderFeed;
+
+// 招待リンク（コード入力なし・リンクを踏むだけで相互フレンド）
+document.getElementById('btnInvite').onclick = async () => {
+  const link = location.origin + location.pathname + '#invite=' + state.uid + '.' + encodeURIComponent(state.userName);
+  const text = `${state.userName}と乾杯フレンドになろう🍻`;
+  if (navigator.share) {
+    try { await navigator.share({ title: '酒育日記', text, url: link }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(link); alert('招待リンクをコピーしたよ！LINEとかで送ってね🍻'); }
+  catch (e) { prompt('この招待リンクを友達に送ってね', link); }
+};
+
+let pendingInvite = null;
+function handleInviteHash() {
+  const m = location.hash.match(/^#invite=([a-f0-9]{24,64})\.(.+)$/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const inv = { uid: m[1], name: decodeURIComponent(m[2]) };
+  if (!state.userName) { pendingInvite = inv; return; }  // 初回セットアップ後に処理
+  acceptInvite(inv);
+}
+async function acceptInvite(inv) {
+  if (inv.uid === state.uid) return;
+  if (!confirm(`「${inv.name}」と乾杯フレンドになる？🍻`)) return;
+  try {
+    await api('/friend', 'POST', { a: { uid: state.uid, name: state.userName }, b: inv });
+    alert(`${inv.name}と友達になった！🍻ボタンのフィードでお互いの乾杯が見られるよ`);
+  } catch (e) {
+    alert('友達登録に失敗しちゃった…電波のいいところでリンクをもう一回開いてみて');
+  }
+}
+
+// フィードへ投稿（1日2回まで・写真は縮小してアップ）
+async function postToFeed() {
+  if (!lastShot) throw new Error('no-photo');
+  const cv = document.createElement('canvas');
+  cv.width = 720; cv.height = 960;
+  cv.getContext('2d').drawImage(lastShot, 0, 0, 720, 960);
+  const img = cv.toDataURL('image/jpeg', .8).split(',')[1];
+  const pts = state.buddyPoints[state.buddy] || 0;
+  return api('/post', 'POST', {
+    uid: state.uid, name: state.userName,
+    charId: state.buddy, lv: levelOf(pts), dayN: kanpaiDayN(),
+    phrase: edit.phrase, vis: state.share.vis, img
+  });
+}
+document.getElementById('btnPostFeed').onclick = async () => {
+  const b = document.getElementById('btnPostFeed');
+  b.disabled = true; b.textContent = '載せてる…';
+  try {
+    await postToFeed();
+    b.textContent = state.share.vis === 'all' ? '🍻 載せたよ（みんな公開）' : '🍻 載せたよ（友達だけ）';
+  } catch (e) {
+    b.disabled = false;
+    if (e.code === 429) { b.textContent = '🍻 乾杯フィードに載せる'; alert('今日はもう2回載せたよ！また明日🍻'); }
+    else { b.textContent = '🍻 乾杯フィードに載せる'; alert('載せられなかった…電波を確認してもう一回'); }
+  }
+};
+
 // ---------- 開発用：デモ写真で編集画面を試す ----------
 window.__demo = function () {
   const cv = document.createElement('canvas');
@@ -837,3 +968,4 @@ document.querySelector('#svgDefs defs').innerHTML = SVG_DEFS;
 updateTitle();
 if (state.buddy && state.userName) { renderHome(); show('screen-home'); }
 else { renderStart(); show('screen-start'); }
+handleInviteHash();

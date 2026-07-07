@@ -361,6 +361,16 @@ input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--red); }
 .rouletteResult { font-size: 30px; min-height: 46px; margin-top: 12px; }
 .rouletteBonus { font-size: 16px; color: var(--red); letter-spacing: 3px; margin-top: 2px; }
 
+/* 乾杯フィード */
+.feedList { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.feedCard {
+  background: var(--paper); border: 2px solid var(--ink);
+  border-radius: 4px 16px 6px 14px; overflow: hidden; box-shadow: var(--shadow);
+}
+.feedCard img { width: 100%; display: block; aspect-ratio: 3 / 4; object-fit: cover; border-bottom: 2px solid var(--ink); background: #241f2e; }
+.feedMeta { padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.9; }
+.feedTime { color: var(--grey); font-size: 11px; margin-left: 6px; }
+
 /* アルバム */
 .albumGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .albumGrid .cell {
