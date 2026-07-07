@@ -14,7 +14,9 @@ body {
   font-family: "Klee", "Hiragino Maru Gothic ProN", -apple-system, sans-serif;
   background: var(--washi);
   color: var(--ink);
+  min-height: 100vh;
   min-height: 100dvh;
+  overscroll-behavior-y: none;
 }
 .fCal { font-family: "Yuji Boku", "Yuji Syuku", serif; }
 .f-syuku { font-family: "Yuji Syuku", serif; }
@@ -94,7 +96,7 @@ svg .o2 { stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; stroke-
 .btnShoot { font-size: 18px; }
 
 /* 撮影 */
-.camWrap { position: relative; width: 100%; height: calc(100dvh - 118px); overflow: hidden; background: #000; }
+.camWrap { position: relative; width: 100%; height: calc(100vh - 118px); height: calc(100dvh - 118px); overflow: hidden; background: #000; }
 #camVideo { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camGuide {
   position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 0; right: 0;
@@ -127,25 +129,29 @@ svg .o2 { stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; stroke-
   box-shadow: var(--shadow); background: #241f2e; touch-action: none;
 }
 #editCanvas { width: 100%; height: 100%; display: block; }
-.overlay { position: absolute; transform: translate(-50%, -50%); cursor: grab; user-select: none; -webkit-user-select: none; }
-.overlay.sel { outline: 2px dashed rgba(232, 163, 61, .9); outline-offset: 4px; }
+.overlay { position: absolute; transform: translate(-50%, -50%); cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
 .overlay svg { display: block; pointer-events: none; }
 
-/* スタンプ形状（v4準拠） */
+/* スタンプ形状（v4準拠・すべて縦書き。長文は右→左に折り返し） */
 .stampA {
   display: inline-block; background: var(--red); color: #fff;
-  padding: .28em .6em; border-radius: 6px; border: .1em solid var(--ink);
-  box-shadow: .13em .13em 0 var(--ink); white-space: nowrap;
+  padding: .34em .3em; border-radius: 6px; border: .1em solid var(--ink);
+  box-shadow: .13em .13em 0 var(--ink);
+  writing-mode: vertical-rl; letter-spacing: .16em; line-height: 1.35;
+  white-space: normal; max-height: 9.8em;
 }
 .stampB {
-  display: inline-block; color: #1d1712; white-space: nowrap;
+  display: inline-block; color: #1d1712;
+  writing-mode: vertical-rl; letter-spacing: .16em; line-height: 1.35;
+  white-space: normal; max-height: 9.8em;
   text-shadow: -.08em -.08em 0 #fff, .08em -.08em 0 #fff, -.08em .08em 0 #fff, .08em .08em 0 #fff,
     0 -.1em 0 #fff, 0 .1em 0 #fff, -.1em 0 0 #fff, .1em 0 0 #fff, .12em .16em .16em rgba(0,0,0,.35);
 }
 .stampC {
   display: inline-flex; align-items: flex-start; gap: .25em;
   background: rgba(255, 252, 242, .92); border: .09em solid var(--ink); border-radius: .25em;
-  padding: .5em .35em; writing-mode: vertical-rl; letter-spacing: .15em; white-space: nowrap;
+  padding: .5em .35em; writing-mode: vertical-rl; letter-spacing: .15em; line-height: 1.35;
+  white-space: normal; max-height: 9.8em;
 }
 .stampC .rakkan {
   writing-mode: horizontal-tb; background: var(--red); color: #fff; font-size: .42em;

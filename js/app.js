@@ -7,7 +7,6 @@ const FINAL_W = 1080, FINAL_H = 1440;
 
 let state = loadState();
 let stream = null;
-let camTimer = null;
 let srcCanvas = null;      // 撮影原本（1080x1440にカバークロップ済み）
 let photoTs = null;        // 撮影時刻（写真に焼き込む）
 let edit = null;           // 編集中の状態
@@ -128,9 +127,6 @@ async function openCamera() {
   show('screen-camera');
   const err = document.getElementById('camError');
   err.hidden = true;
-  const tick = () => { document.getElementById('camDt').textContent = fmtDt(Date.now()); };
-  tick();
-  camTimer = setInterval(tick, 1000);
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1440 } }, audio: false });
     document.getElementById('camVideo').srcObject = stream;
@@ -141,7 +137,6 @@ async function openCamera() {
 }
 function stopCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  if (camTimer) { clearInterval(camTimer); camTimer = null; }
 }
 document.getElementById('btnCamClose').onclick = () => { renderHome(); show('screen-home'); };
 
@@ -185,9 +180,9 @@ function randomStamp() {
   return {
     phrase: PHRASES[Math.floor(Math.random() * PHRASES.length)],
     shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
-    rot: Math.round(Math.random() * 14 - 7),
-    fx: .32 + Math.random() * .36,
-    fy: .28 + Math.random() * .4
+    rot: Math.round(Math.random() * 12 - 6),
+    fx: .25 + Math.random() * .5,
+    fy: .3 + Math.random() * .25
   };
 }
 
@@ -239,16 +234,6 @@ function renderBase(ctx, W, H) {
     ctx.filter = `blur(${(W / 1080 * b * 7).toFixed(1)}px) brightness(${(1 + b * .14).toFixed(3)})`;
     ctx.drawImage(srcCanvas, 0, 0, W, H);
   }
-  ctx.restore();
-  // 日時（仕様: 写真にも焼き込む）
-  ctx.save();
-  ctx.font = `600 ${Math.round(W * .034)}px -apple-system, "Helvetica Neue", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f2c14e';
-  ctx.shadowColor = 'rgba(0,0,0,.55)';
-  ctx.shadowBlur = W * .008;
-  ctx.shadowOffsetY = W * .003;
-  ctx.fillText(fmtDt(photoTs), W / 2, H * .052);
   ctx.restore();
 }
 
@@ -394,12 +379,22 @@ async function drawCharaToCanvas(ctx, scale) {
   URL.revokeObjectURL(url);
 }
 
-// 書道スタンプを合成（形状A/B/C）
+// 縦書きで横倒しにする記号類
+const VERT_ROT = new Set(['ー', '（', '）', '「', '」', '〜', '…', '―', '‥']);
+
+// 書道スタンプを合成（形状A/B/C・すべて縦書き。長文は右→左に折り返し）
 function drawStampToCanvas(ctx, scale) {
   const s = edit.stamp;
   const size = s.size * scale;
   const fam = `"${fontFamily()}", serif`;
-  const text = edit.phrase;
+  const chars = [...edit.phrase];
+  const maxCol = 8;
+  const nCols = Math.ceil(chars.length / maxCol);
+  const colLen = Math.ceil(chars.length / nCols);
+  const step = size * 1.16;      // 字送り（縦）
+  const colStep = size * 1.35;   // 列間（横）
+  const textW = nCols * colStep, textH = colLen * step;
+
   ctx.save();
   ctx.translate(s.fx * FINAL_W, s.fy * FINAL_H);
   ctx.rotate(s.rot * Math.PI / 180);
@@ -410,17 +405,37 @@ function drawStampToCanvas(ctx, scale) {
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
   };
+  // 各文字の位置（列は右→左）
+  const pos = chars.map((ch, i) => {
+    const col = Math.floor(i / colLen), row = i % colLen;
+    return {
+      ch,
+      x: (nCols - 1) * colStep / 2 - col * colStep,
+      y: -textH / 2 + step / 2 + row * step
+    };
+  });
+  const drawChars = (mode, dy = 0) => {
+    pos.forEach(p => {
+      ctx.save();
+      ctx.translate(p.x, p.y + dy);
+      if (VERT_ROT.has(p.ch)) ctx.rotate(Math.PI / 2);
+      if (mode === 'stroke') ctx.strokeText(p.ch, 0, 0); else ctx.fillText(p.ch, 0, 0);
+      ctx.restore();
+    });
+  };
+
   if (edit.shape === 'A') {
-    const w = ctx.measureText(text).width;
-    const bw = w + size * 1.2, bh = size * 1.66, off = size * .13;
+    // 座布団型（赤ベタ＋影）
+    const bw = textW + size * .55, bh = textH + size * .6, off = size * .13;
     ctx.fillStyle = '#262019';
     rr(-bw / 2 + off, -bh / 2 + off, bw, bh, size * .2); ctx.fill();
     ctx.fillStyle = '#b3362f';
     rr(-bw / 2, -bh / 2, bw, bh, size * .2); ctx.fill();
     ctx.lineWidth = size * .1; ctx.strokeStyle = '#262019'; ctx.stroke();
     ctx.fillStyle = '#fff';
-    ctx.fillText(text, 0, size * .06);
+    drawChars('fill');
   } else if (edit.shape === 'B') {
+    // 縁取り型（白フチ＋影）
     ctx.lineJoin = 'round';
     ctx.lineWidth = size * .2;
     ctx.strokeStyle = '#fff';
@@ -428,23 +443,18 @@ function drawStampToCanvas(ctx, scale) {
     ctx.shadowOffsetX = size * .12;
     ctx.shadowOffsetY = size * .16;
     ctx.shadowBlur = size * .16;
-    ctx.strokeText(text, 0, 0);
+    drawChars('stroke');
     ctx.shadowColor = 'transparent';
     ctx.fillStyle = '#1d1712';
-    ctx.fillText(text, 0, 0);
+    drawChars('fill');
   } else {
-    // C: 掛け軸型（縦書き＋落款）
-    const chars = [...text];
-    const step = size * 1.18;
-    const colH = chars.length * step;
-    const bw = size * 1.9, bh = colH + size * 1.0;
+    // 掛け軸型（和紙地＋落款）
+    const bw = textW + size * .8, bh = textH + size * 1.3;
     ctx.fillStyle = 'rgba(255,252,242,.92)';
     rr(-bw / 2, -bh / 2, bw, bh, size * .22); ctx.fill();
     ctx.lineWidth = size * .09; ctx.strokeStyle = '#262019'; ctx.stroke();
     ctx.fillStyle = '#262019';
-    chars.forEach((ch, i) => {
-      ctx.fillText(ch, size * .1, -bh / 2 + size * .85 + i * step);
-    });
+    drawChars('fill', -size * .3);
     // 落款
     const rw = size * .62, rh = size * .78;
     const rx = -bw / 2 + size * .18, ry = bh / 2 - rh - size * .18;
