@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
 
@@ -215,6 +215,12 @@
   </div>
 
   <div class="friendCard">
+    <div class="fcHead">🔔 友達の投稿を通知</div>
+    <button id="btnNotify" class="btnPrimary btnSmall2">通知をオンにする</button>
+    <p class="fcHint" id="notifyHint">オンにすると、友達が乾杯を投稿したときにスマホに通知が届くよ。<br>iPhoneは「ホーム画面に追加」してから開いて許可してね📲</p>
+  </div>
+
+  <div class="friendCard">
     <div class="fcHead">友達のコードで追加</div>
     <div class="addRow">
       <input id="codeInput" class="nameInput" style="margin-bottom:0" type="text" placeholder="SAKE-… を貼り付け" autocomplete="off" autocapitalize="off">
@@ -268,7 +274,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
+<script src="js/data.js?v=24"></script>
+<script src="js/app.js?v=24"></script>
 </body>
 </html>

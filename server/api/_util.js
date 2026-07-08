@@ -34,6 +34,21 @@ export function isAdmin(key) {
   return !!ADMIN_KEY && typeof key === 'string' && key === ADMIN_KEY;
 }
 
+// プッシュ購読の一覧（1端末=1ファイル）
+export async function listSubs(uid) {
+  const { blobs } = await list({ prefix: `subs/${uid}/`, limit: 100 });
+  const arr = await Promise.all(blobs.map(b =>
+    fetch(b.url).then(r => r.ok ? r.json() : null).then(s => s ? { ...s, _blobUrl: b.url } : null).catch(() => null)
+  ));
+  return arr.filter(Boolean);
+}
+// endpoint文字列から購読ファイル名用のハッシュ（衝突回避目的・暗号強度は不要）
+export function endpointHash(endpoint) {
+  let h = 0;
+  for (let i = 0; i < endpoint.length; i++) h = (h * 31 + endpoint.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16);
+}
+
 // フィードのメタ一覧を新しい順に取得（vis無視・生データ）
 export async function listFeedMetas(limit = 60) {
   const { blobs } = await list({ prefix: 'feed/', limit: Math.min(300, limit * 3) });

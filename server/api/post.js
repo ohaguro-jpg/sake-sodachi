@@ -1,9 +1,41 @@
-// 今日の一枚をフィードに投稿（1日2回まで）
-import { put, list } from '@vercel/blob';
-import { cors, todayJST, badUid } from './_util.js';
+// 今日の一枚をフィードに投稿（1日2回まで）＋友達へプッシュ通知
+import { put, list, del } from '@vercel/blob';
+import webpush from 'web-push';
+import { cors, todayJST, badUid, listFriends, listSubs } from './_util.js';
 
 const MAX_PER_DAY = 2;
 const MAX_IMG_BYTES = 600 * 1024;
+
+// VAPID設定（環境変数がある時だけ有効）
+const PUSH_ON = !!(process.env.VAPID_PRIVATE_KEY && process.env.VAPID_PUBLIC_KEY);
+if (PUSH_ON) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:yrfwellekohh@gmail.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
+// 投稿者の友達全員の端末へ通知（失敗しても投稿自体は成功扱い）
+async function notifyFriends(fromUid, fromName, phrase, caption) {
+  if (!PUSH_ON) return;
+  const friends = await listFriends(fromUid);
+  if (!friends.length) return;
+  const body = caption ? String(caption) : (phrase ? `「${phrase}」` : 'フィードをチェックしてね');
+  const payload = JSON.stringify({ title: `🍻 ${fromName || 'ともだち'}が乾杯！`, body });
+  await Promise.allSettled(friends.map(async f => {
+    const subs = await listSubs(f.uid);
+    return Promise.allSettled(subs.map(async s => {
+      try {
+        await webpush.sendNotification(s.subscription, payload);
+      } catch (e) {
+        if (e.statusCode === 404 || e.statusCode === 410) {
+          try { await del(s._blobUrl); } catch (_) {}   // 購読切れは削除
+        }
+      }
+    }));
+  }));
+}
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -39,6 +71,7 @@ export default async function handler(req, res) {
     await put(`feed/${String(99999999999999 - ts)}.json`, JSON.stringify(meta), {
       access: 'public', contentType: 'application/json', addRandomSuffix: true
     });
+    try { await notifyFriends(uid, meta.name, meta.phrase, meta.caption); } catch (_) {}
     res.json({ ok: true, remaining: MAX_PER_DAY - blobs.length - 1 });
   } catch (e) {
     res.status(500).json({ error: 'server', detail: String(e.message || e) });

@@ -1236,9 +1236,62 @@ function openFriends() {
   document.getElementById('myCode').textContent = myCode();
   document.getElementById('codeInput').value = '';
   renderFriendListFull(state.friendsCache || []);
+  renderNotifyBtn();
   show('screen-friends');
   refreshFriends();          // サーバーから最新を取り直す
 }
+
+// ---------- プッシュ通知（友達の投稿でスマホに通知） ----------
+const VAPID_PUBLIC = 'BGRNyTq1F5aVJJn2JccAGAeGryT3ETyqrIGV2J2LZzPt6IbPJMs_M3D_VixXz8CvtBaYgJJp22sP7G2A6G1bew4';
+let swReg = null;
+function urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+async function initSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('sw.js');
+    // 既に許可済みなら購読を最新化してサーバーに再登録
+    if (state.notifyOn && 'PushManager' in window && Notification.permission === 'granted') {
+      const sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+      api('/subscribe', 'POST', { uid: state.uid, subscription: sub.toJSON() }).catch(() => {});
+    }
+  } catch (e) {}
+}
+function pushSupported() {
+  return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+}
+async function enableNotifications() {
+  if (!pushSupported()) {
+    alert('この画面では通知が使えないみたい🙏\niPhoneはSafariの共有ボタン→「ホーム画面に追加」して、追加したアイコンから開いてね📲');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { alert('通知がオフのままだよ。あとで設定から許可すると友達の乾杯が届くよ🔔'); return; }
+  if (!swReg) await initSW();
+  try {
+    const sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+    await api('/subscribe', 'POST', { uid: state.uid, subscription: sub.toJSON() });
+    state.notifyOn = true; saveState();
+    renderNotifyBtn();
+    alert('通知をオンにしたよ！友達が乾杯を投稿したら届くよ🔔🍻');
+  } catch (e) {
+    alert('通知の登録に失敗しちゃった…電波のいいところでもう一度ためしてね');
+  }
+}
+function renderNotifyBtn() {
+  const b = document.getElementById('btnNotify');
+  const hint = document.getElementById('notifyHint');
+  if (!b) return;
+  const on = state.notifyOn && (!('Notification' in window) || Notification.permission === 'granted');
+  b.textContent = on ? '🔔 通知オン（届くよ）' : '通知をオンにする';
+  b.disabled = on;
+  if (hint) hint.style.display = on ? 'none' : '';
+}
+document.getElementById('btnNotify').onclick = enableNotifications;
 function renderFriendListFull(list) {
   const el = document.getElementById('friendListFull');
   if (!list || !list.length) {
@@ -1363,3 +1416,4 @@ updateTitle();
 if (state.buddy && state.userName) { goHome(); }
 else { renderStart(); show('screen-start'); }
 handleInviteHash();
+initSW();
