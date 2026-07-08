@@ -164,7 +164,7 @@ function layoutSlider() {
   if (!w) return;            // まだ幅が確定していない → ResizeObserverが確定時に呼び直す
   panelW = w;
   feedX = 0;                 // フィード全表示
-  homeX = -panelW * 0.72;    // 育成メイン（左28%に友達フィードがチラ見え）
+  homeX = -panelW * 0.86;    // 育成をほぼ全面表示・左14%に友達フィードをちょい見せ
   setSliderX(atFeed ? feedX : homeX, false);
 }
 function goFeedPanel() { atFeed = true; setSliderX(feedX); }
@@ -828,7 +828,7 @@ const ROULETTE_ITEMS = [
   { key: 'tequila', label: 'テキーラ', emoji: '🥃', color: '#7d9b4e', bonus: 4,  stars: '★★',     fx: 'tilt',    sub: 'ワン・ツー・テキーラ！世界が回る' },
   { key: 'boob',    label: 'ブーブ',   emoji: '🍾', color: '#b3362f', bonus: 8,  stars: '★★★',    fx: 'rocket',  sub: 'ポンッ！開けてもらった夜' },
   { key: 'dom',     label: 'ドンペリ', emoji: '👑', color: '#3b5b8c', bonus: 15, stars: '★★★★★', fx: 'rainbow', sub: '最高級の一本、降臨' },
-  { key: 'snack',   label: 'スナック', emoji: '🪩', color: '#c9403a', bonus: 5,  stars: '★★',     fx: 'disco',   sub: 'ネオン灯る、大人の夜' },
+  { key: 'snack',   label: 'スナック', emoji: '🍿', color: '#e0a94f', bonus: 5,  stars: '★★',     fx: 'snack',   sub: 'ぽりぽり、おやつタイム' },
   { key: 'wine',    label: '赤ワイン', emoji: '🍷', color: '#6e211b', bonus: 3,  stars: '★',      fx: 'calm',    sub: 'ゆっくり、しっとり大人時間' }
 ];
 function pickOutcome() { return ROULETTE_ITEMS[Math.floor(Math.random() * ROULETTE_ITEMS.length)]; }
@@ -860,8 +860,8 @@ function fireResult(it) {
     tequila:{ glyphs: ['🌵', '🍋', '☀'],       n: 14, cls: 'pFloat' },
     rocket: { glyphs: ['🍾', '✨', '🥂', '✦'],  n: 30, cls: 'pFall' },
     rainbow:{ glyphs: ['👑', '✦', '✨', '🥂', '★'], n: 40, cls: 'pFall' },
-    disco:  { glyphs: ['🪩', '✦', '💜', '✨'],   n: 22, cls: 'pFloat' },
-    calm:   { glyphs: ['·', '✦', '🍷'],         n: 14, cls: 'pDrift' }
+    snack:  { glyphs: ['🍿', '🍘', '🥨', '🍪'], n: 20, cls: 'pFloat' },
+    calm:   { glyphs: ['🍷', '·', '✦', '·'],    n: 12, cls: 'pWine' }
   }[it.fx] || { glyphs: ['✦'], n: 12, cls: 'pFall' };
   for (let i = 0; i < conf.n; i++) {
     const s = document.createElement('i');
@@ -885,7 +885,16 @@ document.getElementById('resultFx').onclick = () => {
 };
 
 // ---- ゲーム選択 ----
-document.getElementById('btnRouletteOpen').onclick = () => { document.getElementById('gameSheet').hidden = false; };
+// 🎰は今はルーレット直行。スロット/あみだは一旦封印（あみだは線をたどると答えが先に見えてしまうため）。
+// 相棒を3体そだてたら gameSheet（ルーレット/スロット/あみだ選択）を解放する予定。
+function gamesUnlocked() {
+  // TODO: return Object.values(state.buddyPoints).filter(p => levelOf(p) >= 5).length >= 3;
+  return false;
+}
+document.getElementById('btnRouletteOpen').onclick = () => {
+  if (gamesUnlocked()) document.getElementById('gameSheet').hidden = false;
+  else openRoulette();
+};
 document.getElementById('btnGameClose').onclick = () => { document.getElementById('gameSheet').hidden = true; };
 document.querySelectorAll('.gameBtn').forEach(b => {
   b.onclick = () => {
