@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Yuji+Mai&family=Yuji+Boku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=24">
+<link rel="stylesheet" href="css/style.css?v=25">
 </head>
 <body>
 
@@ -39,6 +39,11 @@
       <button class="iconBtn" id="btnFeedReload" title="更新">🔄</button>
     </div>
   </header>
+  <div id="installBanner" class="installBanner" hidden>
+    <span class="ibText">📲 ホーム画面に追加すると通知も使えるよ</span>
+    <button id="btnInstallOpen" class="ibBtn">追加する</button>
+    <button id="btnInstallDismiss" class="ibX" aria-label="閉じる">✕</button>
+  </div>
   <div class="sliderViewport" id="sliderViewport">
     <div class="sliderTrack" id="sliderTrack">
       <!-- 左パネル：みんなの乾杯（友達フィード） -->
@@ -110,6 +115,14 @@
     <p class="editHint">写真の中のスタンプはタップでおかわり🎲　スタンプと相棒はドラッグで移動できるよ</p>
   </div>
 </section>
+
+<!-- ===== ホーム画面に追加 ガイド ===== -->
+<div id="installSheet" class="sheet" hidden>
+  <div class="sheetInner">
+    <div class="sheetHead"><span class="fCal">📲 ホーム画面に追加</span><button class="iconBtn" id="btnInstallClose">✕</button></div>
+    <div id="installBody" class="installBody"></div>
+  </div>
+</div>
 
 <!-- ===== 今夜のゲーム選択 ===== -->
 <div id="gameSheet" class="sheet" hidden>
@@ -218,6 +231,7 @@
     <div class="fcHead">🔔 友達の投稿を通知</div>
     <button id="btnNotify" class="btnPrimary btnSmall2">通知をオンにする</button>
     <p class="fcHint" id="notifyHint">オンにすると、友達が乾杯を投稿したときにスマホに通知が届くよ。<br>iPhoneは「ホーム画面に追加」してから開いて許可してね📲</p>
+    <button id="btnInstallGuide" class="btnGhost" style="margin-top:8px">📲 ホーム画面への追加のしかた</button>
   </div>
 
   <div class="friendCard">
@@ -274,7 +288,7 @@
   <div id="buddyCards" class="charGrid"></div>
 </section>
 
-<script src="js/data.js?v=24"></script>
-<script src="js/app.js?v=24"></script>
+<script src="js/data.js?v=25"></script>
+<script src="js/app.js?v=25"></script>
 </body>
 </html>

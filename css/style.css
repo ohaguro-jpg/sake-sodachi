@@ -434,6 +434,35 @@ input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--red); }
 .friendChip.label { background: var(--ink); color: var(--paper); }
 .friendChip.none { color: var(--grey); font-weight: 400; box-shadow: none; border-style: dashed; }
 
+/* ホーム画面に追加 バナー */
+.installBanner {
+  display: flex; align-items: center; gap: 8px; margin: 10px 0 0; padding: 10px 12px;
+  background: var(--gold); color: var(--ink); border: 2px solid var(--ink);
+  border-radius: 12px; box-shadow: var(--shadow); font-size: 13px; font-weight: 700;
+}
+.installBanner[hidden] { display: none; }
+.ibText { flex: 1; line-height: 1.4; }
+.ibBtn {
+  flex: none; padding: 7px 12px; font-family: inherit; font-size: 13px; font-weight: 700;
+  background: var(--red); color: #fff; border: 2px solid var(--ink); border-radius: 8px; cursor: pointer;
+}
+.ibBtn:active { transform: translate(1px, 1px); }
+.ibX { flex: none; width: 26px; height: 26px; background: transparent; border: none; font-size: 16px; color: var(--ink); cursor: pointer; }
+
+/* ホーム画面に追加 ガイド */
+.installBody { padding: 4px 2px 8px; }
+.instLead { font-size: 15px; text-align: center; margin: 6px 0 14px; line-height: 1.7; }
+.instNote { font-size: 12px; color: var(--grey); line-height: 1.6; margin-top: 10px; text-align: center; }
+.instDone { text-align: center; font-size: 16px; line-height: 1.9; padding: 20px 0; }
+.instSteps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.instSteps li {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 12px 14px; font-size: 14px; line-height: 1.6;
+}
+.stepIco { font-size: 26px; flex: none; line-height: 1.2; }
+.stepSub { font-size: 12px; color: var(--grey); }
+
 /* ゲーム選択 */
 .gamePick { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 6px; }
 .gameBtn {

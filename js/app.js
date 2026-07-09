@@ -207,6 +207,7 @@ function goHome() {
   renderFeed();
   atFeed = false;
   show('screen-home');
+  renderInstallEntry();
   requestAnimationFrame(layoutSlider);
 }
 document.getElementById('btnShoot').onclick = openCamera;
@@ -1265,8 +1266,10 @@ function pushSupported() {
   return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
 }
 async function enableNotifications() {
+  // iOSは「ホーム画面に追加」したPWAでしか通知が使えない → 先に案内
+  if (isIOS() && !isStandalone()) { openInstallSheet(); return; }
   if (!pushSupported()) {
-    alert('この画面では通知が使えないみたい🙏\niPhoneはSafariの共有ボタン→「ホーム画面に追加」して、追加したアイコンから開いてね📲');
+    openInstallSheet();
     return;
   }
   const perm = await Notification.requestPermission();
@@ -1409,6 +1412,58 @@ window.__demo = function () {
   photoTs = Date.now();
   openEditor();
 };
+
+// ---------- ホーム画面に追加（PWAインストール案内） ----------
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; renderInstallEntry(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; state.installed = true; saveState(); renderInstallEntry(); });
+
+function renderInstallEntry() {
+  const banner = document.getElementById('installBanner');
+  if (!banner) return;
+  banner.hidden = isStandalone() || state.installDismissed;
+}
+function openInstallSheet() {
+  const body = document.getElementById('installBody');
+  if (isStandalone()) {
+    body.innerHTML = '<div class="instDone">もうホーム画面に追加ずみだよ！🎉<br>このアイコンから開けば通知もバッチリ届くよ🔔</div>';
+  } else if (deferredInstall) {
+    body.innerHTML = '<p class="instLead">ワンタップで追加できるよ👇</p>' +
+      '<button id="btnDoInstall" class="btnPrimary">ホーム画面に追加する</button>' +
+      '<p class="instNote">追加したアイコンから開くと、友達の乾杯が通知で届くよ🔔</p>';
+    document.getElementById('btnDoInstall').onclick = async () => {
+      deferredInstall.prompt();
+      try { await deferredInstall.userChoice; } catch (e) {}
+      deferredInstall = null;
+      document.getElementById('installSheet').hidden = true;
+    };
+  } else if (isIOS()) {
+    body.innerHTML =
+      '<p class="instLead">Safariの下のメニューから3ステップ🍻<br><span class="instNote">※ Chromeではなく Safari で開いてね</span></p>' +
+      '<ol class="instSteps">' +
+      '<li><span class="stepIco">⬆️</span><div><b>共有ボタン</b>をタップ<br><span class="stepSub">画面下の、□から↑が飛び出したマーク</span></div></li>' +
+      '<li><span class="stepIco">➕</span><div>メニューを下にスクロールして<br><b>「ホーム画面に追加」</b>をタップ</div></li>' +
+      '<li><span class="stepIco">✅</span><div>右上の<b>「追加」</b>をタップ！</div></li>' +
+      '<li><span class="stepIco">🍺</span><div>ホームに出た<b>アイコンから開く</b>と完成。<br><span class="stepSub">そこで👥→「通知をオンにする」で友達の乾杯が届くよ🔔</span></div></li>' +
+      '</ol>';
+  } else {
+    body.innerHTML =
+      '<p class="instLead">ブラウザのメニュー（⋮ や 共有）から<br><b>「アプリをインストール」/「ホーム画面に追加」</b>を選んでね📲</p>' +
+      '<p class="instNote">追加したアイコンから開くと通知が使えるよ🔔</p>';
+  }
+  document.getElementById('installSheet').hidden = false;
+}
+document.getElementById('btnInstallOpen').onclick = openInstallSheet;
+document.getElementById('btnInstallClose').onclick = () => { document.getElementById('installSheet').hidden = true; };
+document.getElementById('btnInstallDismiss').onclick = () => { state.installDismissed = true; saveState(); renderInstallEntry(); };
+document.getElementById('btnInstallGuide').onclick = openInstallSheet;
 
 // ---------- 起動 ----------
 document.querySelector('#svgDefs defs').innerHTML = SVG_DEFS;
